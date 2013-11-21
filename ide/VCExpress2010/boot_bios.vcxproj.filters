@@ -1,0 +1,158 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="..\..\build\bios.mk" />
+    <None Include="..\..\src\boot\bios\README.md" />
+    <None Include="..\..\src\boot\bios\rules.mk" />
+    <None Include="..\..\src\boot\bios\mbr\main.asm">
+      <Filter>mbr</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\mbr\README.md">
+      <Filter>mbr</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\mbr\rules.mk">
+      <Filter>mbr</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\bbp.ld">
+      <Filter>bbp</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\README.md">
+      <Filter>bbp</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\rules.mk">
+      <Filter>bbp</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\boot\bios.asm">
+      <Filter>bbp\boot</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\boot\boot.asm">
+      <Filter>bbp\boot</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\boot\boot.ld">
+      <Filter>bbp\boot</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\boot\README.md">
+      <Filter>bbp\boot</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\boot\rules.mk">
+      <Filter>bbp\boot</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\loader\interrupts.asm">
+      <Filter>bbp\loader</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\loader\loader.ld">
+      <Filter>bbp\loader</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\loader\README.md">
+      <Filter>bbp\loader</Filter>
+    </None>
+    <None Include="..\..\src\boot\bios\bbp\loader\rules.mk">
+      <Filter>bbp\loader</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="mbr">
+      <UniqueIdentifier>{d3b39c6a-86cd-40cd-8d4d-6e16bd1cf0f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="bbp">
+      <UniqueIdentifier>{67389748-46df-4f09-b573-9ec376aa8ea9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="bbp\boot">
+      <UniqueIdentifier>{a07800cd-b614-4d9f-8b3c-30753c5e59bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="bbp\loader">
+      <UniqueIdentifier>{1666b764-23a8-43a1-a4b7-8186a6428ba9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\boot\bios\bbp\config.h">
+      <Filter>bbp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\boot\common16.h">
+      <Filter>bbp\boot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\boot\common32.h">
+      <Filter>bbp\boot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\boot\main16.h">
+      <Filter>bbp\boot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\boot\main32.h">
+      <Filter>bbp\boot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\acpi.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\ahci.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\apic.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\common.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\cpuid.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\debug_print.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\interrupts.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\io.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\kmain.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\lib.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\msr.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\paging.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\pci.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c">
+      <Filter>bbp\boot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\boot\main32.c">
+      <Filter>bbp\boot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\acpi.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\ahci.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\apic.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\debug_print.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\interrupts.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\kmain.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\lib.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\paging.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\pci.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,58 @@
+#
+# MBR2GPT test environment
+#
+
+# CPU
+cpu: count=1:2:1, ips=9000000, quantum=16, model=core2_penryn_t9600, reset_on_triple_fault=1, cpuid_limit_winnt=0, ignore_bad_msrs=1, mwait_is_nop=0
+
+# RAM
+memory: host=256, guest=256
+
+# ROM images
+romimage: file="C:\Bochs-2.6\BIOS-bochs-latest"
+vgaromimage: file="C:\Bochs-2.6\VGABIOS-lgpl-latest"
+
+# Boot
+boot: disk
+floppy_bootsig_check: disabled=0
+
+# Storage
+ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
+ata0-master: type=disk, mode=flat, translation=auto, path="..\bin\disk.img", cylinders=10, heads=16, spt=63, biosdetect=auto, model="Generic 1234"
+ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15
+ata2: enabled=0
+ata3: enabled=0
+
+# IO
+pci: enabled=1, chipset=i440fx
+parport1: enabled=1, file=""
+parport2: enabled=0
+com1: enabled=1, mode=null, dev=""
+com2: enabled=0
+com3: enabled=0
+com4: enabled=0
+
+# Video
+display_library: win32
+vga: extension=vbe, update_freq=5
+private_colormap: enabled=0
+
+# Bochs
+plugin_ctrl: unmapped=1, biosdev=1, speaker=1, extfpuirq=1, parallel=1, serial=1, gameport=1
+config_interface: win32config
+print_timestamps: enabled=0
+port_e9_hack: enabled=0
+clock: sync=none, time0=local, rtc_sync=0
+
+# HID
+keyboard: type=mf, serial_delay=250, paste_delay=100000, keymap=
+user_shortcut: keys=none
+mouse: enabled=0, type=ps2, toggle=ctrl+mbutton
+
+# Logging
+log: bochsout.txt
+logprefix: %t%e%d
+panic: action=ask
+error: action=report
+info: action=report
+debug: action=ignore

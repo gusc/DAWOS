@@ -1,0 +1,24 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boot_bios", "boot_bios.vcxproj", "{3D779CE6-A610-49F7-AC07-992AEEB4115D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kernel", "kernel.vcxproj", "{31C9557B-AD77-42AF-B21F-CA0C37CBA3A3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3D779CE6-A610-49F7-AC07-992AEEB4115D} = {3D779CE6-A610-49F7-AC07-992AEEB4115D}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		BIOS|Win32 = BIOS|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3D779CE6-A610-49F7-AC07-992AEEB4115D}.BIOS|Win32.ActiveCfg = MBR|Win32
+		{3D779CE6-A610-49F7-AC07-992AEEB4115D}.BIOS|Win32.Build.0 = MBR|Win32
+		{31C9557B-AD77-42AF-B21F-CA0C37CBA3A3}.BIOS|Win32.ActiveCfg = MBR|Win32
+		{31C9557B-AD77-42AF-B21F-CA0C37CBA3A3}.BIOS|Win32.Build.0 = MBR|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

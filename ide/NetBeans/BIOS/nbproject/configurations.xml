@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="90">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df root="../../../src/boot/bios" name="0">
+      <df name="bbp">
+        <df name="boot">
+          <in>main16.c</in>
+          <in>main32.c</in>
+        </df>
+        <df name="loader">
+          <in>acpi.c</in>
+          <in>ahci.c</in>
+          <in>apic.c</in>
+          <in>debug_print.c</in>
+          <in>interrupts.c</in>
+          <in>kmain.c</in>
+          <in>lib.c</in>
+          <in>paging.c</in>
+          <in>pci.c</in>
+        </df>
+      </df>
+    </df>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>../../../build/bios.mk</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+  <sourceRootList>
+    <Elem>../../../src/boot/bios</Elem>
+  </sourceRootList>
+  <projectmakefile>../../../build/bios.mk</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <compilerSet>Netwide_Assembler|MinGW</compilerSet>
+        <dependencyChecking>false</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <codeAssistance>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>../../../build</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f bios.mk all</buildCommand>
+          <cleanCommand>${MAKE} -f bios.mk clean</cleanCommand>
+          <executablePath>../../../bin</executablePath>
+        </makeTool>
+      </makefileType>
+      <item path="../../../src/boot/bios/bbp/boot/main16.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/boot/main32.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/acpi.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/ahci.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/apic.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/debug_print.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/interrupts.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/kmain.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/lib.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/paging.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <item path="../../../src/boot/bios/bbp/loader/pci.c"
+            ex="false"
+            tool="0"
+            flavor2="2">
+        <cTool>
+        </cTool>
+      </item>
+      <folder path="0/bbp/boot">
+        <cTool>
+          <incDir>
+            <pElem>../../../src/boot/bios/bbp/boot</pElem>
+          </incDir>
+        </cTool>
+      </folder>
+      <folder path="0/bbp/loader">
+        <cTool>
+          <incDir>
+            <pElem>../../../src/boot/bios/bbp/loader</pElem>
+          </incDir>
+        </cTool>
+      </folder>
+    </conf>
+  </confs>
+</configurationDescriptor>

@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="MBR|Win32">
+      <Configuration>MBR</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\build\kernel.mk" />
+    <None Include="..\..\src\kernel\cpu\interrupts.asm" />
+    <None Include="..\..\src\kernel\cpu\README.md" />
+    <None Include="..\..\src\kernel\memory\README.md" />
+    <None Include="..\..\src\kernel\README.md" />
+    <None Include="..\..\src\kernel\scheduler\README.md" />
+    <None Include="..\..\src\kernel\syscall\README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\kernel\cpu\apic.c" />
+    <ClCompile Include="..\..\src\kernel\cpu\interrupts.c" />
+    <ClCompile Include="..\..\src\kernel\kmain.c" />
+    <ClCompile Include="..\..\src\kernel\memory\heap.c" />
+    <ClCompile Include="..\..\src\kernel\memory\paging.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\kernel\cpu\apic.h" />
+    <ClInclude Include="..\..\src\kernel\cpu\cpuid.h" />
+    <ClInclude Include="..\..\src\kernel\cpu\interrupts.h" />
+    <ClInclude Include="..\..\src\kernel\cpu\io.h" />
+    <ClInclude Include="..\..\src\kernel\cpu\msr.h" />
+    <ClInclude Include="..\..\src\kernel\kmain.h" />
+    <ClInclude Include="..\..\src\kernel\memory\heap.h" />
+    <ClInclude Include="..\..\src\kernel\memory\paging.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{31C9557B-AD77-42AF-B21F-CA0C37CBA3A3}</ProjectGuid>
+    <RootNamespace>dawos</RootNamespace>
+    <ProjectName>kernel</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'">
+    <ExecutablePath>C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\Netwide Assembler;C:\cross-gcc\x86_64-elf\bin</ExecutablePath>
+    <NMakeBuildCommandLine>cd $(ProjectDir)
+cd ..\..\build
+make -f kernel.mk all</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(NMakeBuildCommandLine)</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cd $(ProjectDir)
+cd ..\..\build
+make -f kernel.mk clean</NMakeCleanCommandLine>
+    <IncludePath>..\..\src\</IncludePath>
+    <ReferencePath />
+    <LibraryPath />
+    <SourcePath>..\..\src\</SourcePath>
+    <ExcludePath />
+    <NMakeOutput>..\..\bin\kernel.img</NMakeOutput>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

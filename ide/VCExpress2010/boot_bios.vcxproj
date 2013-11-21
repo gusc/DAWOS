@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="MBR|Win32">
+      <Configuration>MBR</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\build\bios.mk" />
+    <None Include="..\..\src\boot\bios\bbp\bbp.ld" />
+    <None Include="..\..\src\boot\bios\bbp\boot\bios.asm" />
+    <None Include="..\..\src\boot\bios\bbp\boot\boot.asm" />
+    <None Include="..\..\src\boot\bios\bbp\boot\boot.ld" />
+    <None Include="..\..\src\boot\bios\bbp\boot\README.md" />
+    <None Include="..\..\src\boot\bios\bbp\boot\rules.mk" />
+    <None Include="..\..\src\boot\bios\bbp\loader\interrupts.asm" />
+    <None Include="..\..\src\boot\bios\bbp\loader\loader.ld" />
+    <None Include="..\..\src\boot\bios\bbp\loader\README.md" />
+    <None Include="..\..\src\boot\bios\bbp\loader\rules.mk" />
+    <None Include="..\..\src\boot\bios\bbp\README.md" />
+    <None Include="..\..\src\boot\bios\bbp\rules.mk" />
+    <None Include="..\..\src\boot\bios\mbr\main.asm" />
+    <None Include="..\..\src\boot\bios\mbr\README.md" />
+    <None Include="..\..\src\boot\bios\mbr\rules.mk" />
+    <None Include="..\..\src\boot\bios\README.md" />
+    <None Include="..\..\src\boot\bios\rules.mk" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\boot\bios\bbp\boot\common16.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\boot\common32.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\boot\main16.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\boot\main32.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\config.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\acpi.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\ahci.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\apic.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\common.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\cpuid.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\debug_print.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\interrupts.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\io.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\kmain.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\lib.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\msr.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\paging.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\pci.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\boot\main32.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\acpi.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\ahci.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\apic.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\debug_print.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\interrupts.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\kmain.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\lib.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\paging.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\pci.c" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3D779CE6-A610-49F7-AC07-992AEEB4115D}</ProjectGuid>
+    <RootNamespace>dawos</RootNamespace>
+    <ProjectName>boot_bios</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <OutDir>..\..\bin\</OutDir>
+    <IntDir>..\..\build\</IntDir>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'">
+    <ExecutablePath>C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\Netwide Assembler;C:\cross-gcc\i786-elf\bin;C:\cross-gcc\x86_64-elf\bin</ExecutablePath>
+    <NMakeBuildCommandLine>cd $(ProjectDir)
+cd ..\..\build
+make -f bios.mk all</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(NMakeBuildCommandLine)</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cd $(ProjectDir)
+cd ..\..\build
+make -f bios.mk clean</NMakeCleanCommandLine>
+    <IncludePath>..\..\src\</IncludePath>
+    <ReferencePath />
+    <LibraryPath />
+    <SourcePath>..\..\src\</SourcePath>
+    <ExcludePath />
+    <NMakeOutput>..\bin\bbp.img</NMakeOutput>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
