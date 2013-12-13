@@ -53,9 +53,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Initial memory size to map to enter Long Mode
 // we don't need more than this, but it should be more than 1MB
 // as the PMLx structures will be located at the 1MB mark
-#define INIT_MEM 0x200000 // 2MB
+#define INIT_MEM 0x2000000 // 32MB
 // Default page size
-#define PAGE_SIZE 0x1000
+#define PAGE_SIZE 0x1000 // 4KB
 
 //
 // Hard-coded memory locations
@@ -64,7 +64,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // E820 memory map location
 #define E820_LOC 0x0800
 // Memory location where to store PMLx page tables
-#define PT_LOC 0x00100000
+#define PT_LOC 0x0006D000
+// Heap location where to store bootloader heap
+#define HEAP_LOC 0x00100000
+// Align to 8 byte boundary
+#define HEAP_ALIGN 0x7
+// Initial heap size
+#define HEAP_SIZE PAGE_SIZE
 
 #if VIDEOMODE == 1
 	// Teletype video memory location

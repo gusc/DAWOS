@@ -16,20 +16,20 @@ Memory map (Physical)
 ---------------------
 
 0x0000000000000000 - 0x00000000000FFFFF = Legacy memory area
-           0x00000 -            0x05FFF = Reserved for BIOS
-           0x00600 -            0x00608 = Bootloader data
+           0x00000 -            0x005FF = Reserved for BIOS
+           0x00600 -            0x006FF = Bootloader data
            0x00700 -            0x007FF = MBR bootstrap after relocation
            0x00800 -            0x009FF = E820 Memory map
            0x00900 -            0x07BFF = Bootloader stack
-           0x07C00 -            0x7FFFF = Bootloader code
+           0x07C00 -            0x6CFFF = Bootloader code
+		   0x6D000 -            0x7FFFF = PML tables to map first 32MB of RAM to do a Long Mode jump
+           ...D000 -            ...DFFF = PML4 table
+           ...E000 -            ...EFFF = PML3 table
+           ...F000 -            ...FFFF = PML2 table
+           ..70000 -            ..7FFFF = 16x PML1 table
            0x80000 -            0x9FFFF = Reserved for BIOS
            0xA0000 -            0xB7FFF = VGA video buffer
            0xB8000 -            0xBFFFF = VGA teletype buffer
            0xC0000 -            0xFFFFF = Reserved for BIOS
 
-0x0000000000100000 - 0x0000000000100FFF = PML4 table
-0x0000000000101000 - 0x0000000000101FFF = PML3 table
-0x0000000000102000 - 0x0000000000102FFF = PML2 table
-0x0000000000103000 - 0x0000000000103FFF = PML1 table - maps first 2MB of RAM to do a Long Mode jump
-
-0x0000000000104000 - ...                = Free to use (kernel gets loaded somewhere here)
+0x0000000000100000 - ...                = Free to use (kernel gets loaded somewhere here)

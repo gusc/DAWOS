@@ -38,7 +38,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "common.h"
 
-void heap_init(uint64 start, uint64 size);
+/**
+* Initialize heap
+*/
+void heap_init();
+/**
+* Allocate a block of memory on the heap
+* @param size - size of a block to allocate
+* @return new pointer to a memory block allocated or 0
+*/
+void *heap_alloc(uint64 size);
+/**
+* Free memory block allocated by heal_alloc()
+* @param ptr - memory block allocated previously
+*/
+void heap_free(void *ptr);
 
 
 #endif
