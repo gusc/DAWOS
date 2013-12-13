@@ -38,6 +38,7 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\common.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\cpuid.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\debug_print.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\heap.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\interrupts.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\io.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\kmain.h" />
@@ -53,6 +54,7 @@
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\ahci.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\apic.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\debug_print.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\heap.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\interrupts.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\kmain.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\lib.c" />

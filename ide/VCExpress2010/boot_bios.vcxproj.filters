@@ -119,6 +119,9 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\pci.h">
       <Filter>bbp\loader</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\heap.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c">
@@ -152,6 +155,9 @@
       <Filter>bbp\loader</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\pci.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\heap.c">
       <Filter>bbp\loader</Filter>
     </ClCompile>
   </ItemGroup>
