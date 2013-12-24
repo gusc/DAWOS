@@ -3,6 +3,10 @@
 Memory heap management functions
 ================================
 
+Heap management consists of free lists:
+8 size segregated lists 16 - 2048 byte lists
+1 binary search tree for large free blocks
+
 License (BSD-3)
 ===============
 

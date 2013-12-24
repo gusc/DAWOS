@@ -50,12 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VIDEOMODE 1
 // Enable debug output
 #define DEBUG 1
-// Initial memory size to map to enter Long Mode
-// we don't need more than this, but it should be more than 1MB
-// as the PMLx structures will be located at the 1MB mark
-#define INIT_MEM 0x2000000 // 32MB
-// Default page size
-#define PAGE_SIZE 0x1000 // 4KB
+
 
 //
 // Hard-coded memory locations
@@ -63,14 +58,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // E820 memory map location
 #define E820_LOC 0x0800
+// Heap location where to store bootloader heap
+// Initial memory size to map to enter Long Mode
+// we don't need more than this, but it should be more than 1MB
+// as the PMLx structures will be located at the 1MB mark
+#define INIT_MEM 0x2000000 // 32MB
 // Memory location where to store PMLx page tables
 #define PT_LOC 0x0006D000
-// Heap location where to store bootloader heap
+// Default page size
+#define PAGE_SIZE 0x1000 // 4KB
+
 #define HEAP_LOC 0x00100000
-// Align to 8 byte boundary
-#define HEAP_ALIGN 0x7
 // Initial heap size
 #define HEAP_SIZE PAGE_SIZE
+// Segregated list count (MIN_FREE <<= LIST_COUNT for largest segregated block size)
+#define HEAP_LIST_COUNT 8
+// Minimum free block size listed in segregated lists in bytes
+#define HEAP_MIN_FREE 16
+// Maximum free block size listed in segregated lists in bytes (larger ones go to a tree)
+#define HEAP_MAX_FREE (HEAP_MIN_FREE << (HEAP_LIST_COUNT - 1))
+// Align to 16 byte boundary
+#define HEAP_ALIGN (HEAP_MIN_FREE - 1)
 
 #if VIDEOMODE == 1
 	// Teletype video memory location
