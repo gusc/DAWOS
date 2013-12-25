@@ -71,14 +71,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HEAP_LOC 0x00100000
 // Initial heap size
 #define HEAP_SIZE PAGE_SIZE
-// Segregated list count (MIN_FREE <<= LIST_COUNT for largest segregated block size)
-#define HEAP_LIST_COUNT 8
-// Minimum free block size listed in segregated lists in bytes
-#define HEAP_MIN_FREE 16
-// Maximum free block size listed in segregated lists in bytes (larger ones go to a tree)
-#define HEAP_MAX_FREE (HEAP_MIN_FREE << (HEAP_LIST_COUNT - 1))
+// Element size distribution in segregated lists (16 is a minumum on 64bit systems, 
+// as we have to store 2 pointers in free blocks, each 8 bytes)
+#define HEAP_LIST_SPARSE 16
+// Minimum free block size listed in segregated lists in bytes (must be at least 16 bytes)
+#define HEAP_LIST_MIN HEAP_LIST_SPARSE
+// Maximum free block size listed in segregated lists in bytes (larger ones go to a binary search tree)
+#define HEAP_LIST_MAX 512
+// Segregated list count
+#define HEAP_LIST_COUNT ((HEAP_LIST_MAX - HEAP_LIST_MIN) / HEAP_LIST_SPARSE)
 // Align to 16 byte boundary
-#define HEAP_ALIGN (HEAP_MIN_FREE - 1)
+#define HEAP_ALIGN_MASK -16
 
 #if VIDEOMODE == 1
 	// Teletype video memory location

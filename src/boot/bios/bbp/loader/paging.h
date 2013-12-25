@@ -70,6 +70,8 @@ typedef union {
 #define PAGE_MASK		0xFFFFFFFFFFFFF000
 #define PAGE_IMASK		0x0000000000000FFF // Inverse mask
 
+#define PAGE_ALIGN(n) ((n + PAGE_IMASK) & PAGE_MASK)
+
 /**
 * Initialize paging
 */

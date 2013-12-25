@@ -48,10 +48,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void heap_init();
 /**
 * Allocate a block of memory on the heap
-* @param size - size of a block to allocate
-* @return new pointer to a memory block allocated or 0
+* @param psize - size of a block to allocate (payload size)
+* @return new pointer to the memory block allocated or 0
 */
-void *heap_alloc(uint64 size);
+void *heap_alloc(uint64 psize);
+/**
+* Re allocate a block of memory on the heap
+* @param ptr - memory block allocated previously
+* @param psize - new size of block (payload size)
+* @return new pointer to the memory block allocated or 0
+*/
+void *heap_realloc(void *ptr, uint64 psize);
 /**
 * Free memory block allocated by heal_alloc()
 * @param ptr - memory block allocated previously
