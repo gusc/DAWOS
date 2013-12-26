@@ -1,14 +1,14 @@
 /*
 
-Kernel entry point
-==================
+Placement heap management functions
+===================================
 
-This is where the fun part begins
+Simple placement address heap implementation
 
 License (BSD-3)
 ===============
 
-Copyright (c) 2012, Gusts 'gusC' Kaksis <gusts.kaksis@gmail.com>
+Copyright (c) 2013, Gusts 'gusC' Kaksis <gusts.kaksis@gmail.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -36,54 +36,34 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "../config.h"
-#include "kmain.h"
-#include "lib.h"
-#include "io.h"
-#include "interrupts.h"
 #include "paging.h"
-#include "heap.h"
-#include "pci.h"
-#include "ahci.h"
+#include "pheap.h"
+#include "lib.h"
 #if DEBUG == 1
 	#include "debug_print.h"
 #endif
 
+uint64 placement_address = PADDR_LOC;
+
 /**
-* Kernel entry point
+* Allocate a block of memory on the heap
+* @param psize - size of a block to allocate (payload size)
+* @param aligned - weather to align the block to page boundary
+* @return new pointer to the memory block allocated or 0
 */
-void kmain(){
+static void *pheap_alloc_block(uint64 psize, bool aligned){
+	if (aligned){
+		placement_address = PAGE_SIZE_ALIGN(placement_address);
+	}
+	uint64 tmp = placement_address;
+	placement_address += psize;
+	return (void *)tmp;
+}
 
-#if DEBUG == 1
-	// Clear the screen
-	debug_clear(DC_WB);
-	// Show something on the screen
-	debug_print(DC_WB, "Long mode");
-#endif
+void *pheap_alloc(uint64 psize){
+	return pheap_alloc_block(psize, false);
+}
 
-	// Initialize paging (well, actually re-initialize)
-	page_init();
-	// Initialize interrupts
-	interrupt_init();
-	// Initialize heap
-	heap_init(HEAP_LOC, HEAP_SIZE);
-
-	uint64 addr = (uint64)heap_alloc(64);
-#if DEBUG == 1
-	debug_print(DC_WB, "Heap alloc addr: %x", addr);
-#endif
-	heap_free((void *)addr);
-
-	// Initialize PCI
-	pci_init();
-#if DEBUG == 1
-	//pci_list();
-#endif
-
-	// Initialize AHCI
-	//if (ahci_init()){
-
-	//}
-	
-	// Infinite loop
-	while(true){}
+void *pheap_alloc_align(uint64 psize){
+	return pheap_alloc_block(psize, true);
 }

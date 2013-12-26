@@ -1,14 +1,14 @@
 /*
 
-Kernel entry point
-==================
+Placement heap management functions
+===================================
 
-This is where the fun part begins
+Simple placement address heap implementation
 
 License (BSD-3)
 ===============
 
-Copyright (c) 2012, Gusts 'gusC' Kaksis <gusts.kaksis@gmail.com>
+Copyright (c) 2013, Gusts 'gusC' Kaksis <gusts.kaksis@gmail.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,55 +35,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "../config.h"
-#include "kmain.h"
-#include "lib.h"
-#include "io.h"
-#include "interrupts.h"
-#include "paging.h"
-#include "heap.h"
-#include "pci.h"
-#include "ahci.h"
-#if DEBUG == 1
-	#include "debug_print.h"
-#endif
+#ifndef __pheap_h
+#define __pheap_h
+
+#include "common.h"
 
 /**
-* Kernel entry point
+* Allocate a block of memory on the heap
+* @param psize - size of a block to allocate (payload size)
+* @return new pointer to the memory block allocated or 0
 */
-void kmain(){
+void *pheap_alloc(uint64 psize);
+/**
+* Allocate a block of memory on the heap aligned to page boundary
+* @param psize - size of a block to allocate (payload size)
+* @return new pointer to the memory block allocated or 0
+*/
+void *pheap_alloc_align(uint64 psize);
 
-#if DEBUG == 1
-	// Clear the screen
-	debug_clear(DC_WB);
-	// Show something on the screen
-	debug_print(DC_WB, "Long mode");
 #endif
-
-	// Initialize paging (well, actually re-initialize)
-	page_init();
-	// Initialize interrupts
-	interrupt_init();
-	// Initialize heap
-	heap_init(HEAP_LOC, HEAP_SIZE);
-
-	uint64 addr = (uint64)heap_alloc(64);
-#if DEBUG == 1
-	debug_print(DC_WB, "Heap alloc addr: %x", addr);
-#endif
-	heap_free((void *)addr);
-
-	// Initialize PCI
-	pci_init();
-#if DEBUG == 1
-	//pci_list();
-#endif
-
-	// Initialize AHCI
-	//if (ahci_init()){
-
-	//}
-	
-	// Infinite loop
-	while(true){}
-}

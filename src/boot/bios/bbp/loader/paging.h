@@ -67,10 +67,25 @@ typedef union {
 	uint64 raw;
 } vaddr_t;
 
-#define PAGE_MASK		0xFFFFFFFFFFFFF000
-#define PAGE_IMASK		0x0000000000000FFF // Inverse mask
-
-#define PAGE_ALIGN(n) ((n + PAGE_IMASK) & PAGE_MASK)
+// Page masks
+#define PAGE_MASK          0xFFFFFFFFFFFFF000
+#define PAGE_IMASK         0x0000000000000FFF // Inverse mask
+#define PAGE_PML4_IDX_MASK 0xFF8000000000
+#define PAGE_PML3_IDX_MASK 0x7FC0000000
+#define PAGE_PML2_IDX_MASK 0x3FE00000
+#define PAGE_PML1_IDX_MASK 0x1FF000
+#define PAGE_OFFSET_MASK   0xFFF
+// Get table entry index from virtual address
+#define PAGE_PML4_IDX(va) ((va & PAGE_PML4_IDX_MASK) >> 39)
+#define PAGE_PML3_IDX(va) ((va & PAGE_PML3_IDX_MASK) >> 30)
+#define PAGE_PML2_IDX(va) ((va & PAGE_PML2_IDX_MASK) >> 21)
+#define PAGE_PML1_IDX(va) ((va & PAGE_PML1_IDX_MASK) >> 12)
+// Align address to page start boundary
+#define PAGE_ALIGN(n) (n & PAGE_MASK)
+// Align size to page end boundary
+#define PAGE_SIZE_ALIGN(n) ((n + PAGE_IMASK) & PAGE_MASK)
+// Make virtual address canonical (sign extend)
+#define PAGE_CANONICAL(va) ((va << 16) >> 16)
 
 /**
 * Initialize paging

@@ -68,9 +68,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Default page size
 #define PAGE_SIZE 0x1000 // 4KB
 
-#define HEAP_LOC 0x00100000
+// Placement address start
+#define PADDR_LOC 0x100000
+// Heap start
+#define HEAP_LOC 0x200000
 // Initial heap size
-#define HEAP_SIZE PAGE_SIZE
+#define HEAP_SIZE (INIT_MEM - HEAP_LOC)
 // Element size distribution in segregated lists (16 is a minumum on 64bit systems, 
 // as we have to store 2 pointers in free blocks, each 8 bytes)
 #define HEAP_LIST_SPARSE 16
@@ -80,8 +83,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HEAP_LIST_MAX 512
 // Segregated list count
 #define HEAP_LIST_COUNT ((HEAP_LIST_MAX - HEAP_LIST_MIN) / HEAP_LIST_SPARSE)
-// Align to 16 byte boundary
-#define HEAP_ALIGN_MASK -16
 
 #if VIDEOMODE == 1
 	// Teletype video memory location

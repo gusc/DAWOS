@@ -42,10 +42,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "common.h"
 
+// Align to 16 byte boundary
+#define HEAP_MASK -16
+#define HEAP_IMASK 15
+
+#define HEAP_ALIGN(n) ((n + HEAP_IMASK) & HEAP_MASK)
+#define HEAP_IS_USED(p) (*p & 1)
+
 /**
 * Initialize heap
+* @param start - start address of the heap
+* @param isize - initial size of the heap
 */
-void heap_init();
+void heap_init(uint64 start, uint64 isize);
 /**
 * Allocate a block of memory on the heap
 * @param psize - size of a block to allocate (payload size)

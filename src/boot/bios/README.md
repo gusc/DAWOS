@@ -26,10 +26,11 @@ Memory map (Physical)
            ...D000 -            ...DFFF = PML4 table
            ...E000 -            ...EFFF = PML3 table
            ...F000 -            ...FFFF = PML2 table
-           ..70000 -            ..7FFFF = 16x PML1 table
+           ..70000 -            ..7FFFF = 16x PML1 tables
            0x80000 -            0x9FFFF = Reserved for BIOS
            0xA0000 -            0xB7FFF = VGA video buffer
            0xB8000 -            0xBFFFF = VGA teletype buffer
            0xC0000 -            0xFFFFF = Reserved for BIOS
 
-0x0000000000100000 - ...                = Free to use (kernel gets loaded somewhere here)
+0x0000000000100000 -           0x200000 = Placement heap area (used in the initial phase of page expansion)
+0x0000000000200000 - ...                = Free to use (used by heap allocator)

@@ -14,6 +14,9 @@
     <ClCompile Include="..\..\src\kernel\memory\paging.c">
       <Filter>memory</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\kernel\arch\acpi.c">
+      <Filter>arch</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\kernel\kmain.h" />
@@ -37,6 +40,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\kernel\memory\paging.h">
       <Filter>memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\kernel\arch\acpi.h">
+      <Filter>arch</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -70,6 +76,9 @@
     </Filter>
     <Filter Include="syscall">
       <UniqueIdentifier>{09074f88-123c-4f94-9a4d-8475d5b89160}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="arch">
+      <UniqueIdentifier>{1a45014f-78b0-426a-a773-e3c01598ed86}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

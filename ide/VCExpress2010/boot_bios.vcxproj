@@ -46,6 +46,7 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\msr.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\paging.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\pci.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\pheap.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c" />
@@ -60,6 +61,7 @@
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\lib.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\paging.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\pci.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\pheap.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3D779CE6-A610-49F7-AC07-992AEEB4115D}</ProjectGuid>
@@ -75,7 +77,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'">
-    <ExecutablePath>C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\Netwide Assembler;C:\cross-gcc\i786-elf\bin;C:\cross-gcc\x86_64-elf\bin</ExecutablePath>
+    <ExecutablePath>$(Path)</ExecutablePath>
     <NMakeBuildCommandLine>cd $(ProjectDir)
 cd ..\..\build
 make -f bios.mk all

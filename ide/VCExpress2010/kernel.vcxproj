@@ -16,6 +16,7 @@
     <None Include="..\..\src\kernel\syscall\README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\kernel\arch\acpi.c" />
     <ClCompile Include="..\..\src\kernel\cpu\apic.c" />
     <ClCompile Include="..\..\src\kernel\cpu\interrupts.c" />
     <ClCompile Include="..\..\src\kernel\kmain.c" />
@@ -23,6 +24,7 @@
     <ClCompile Include="..\..\src\kernel\memory\paging.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\kernel\arch\acpi.h" />
     <ClInclude Include="..\..\src\kernel\cpu\apic.h" />
     <ClInclude Include="..\..\src\kernel\cpu\cpuid.h" />
     <ClInclude Include="..\..\src\kernel\cpu\interrupts.h" />
@@ -44,7 +46,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'">
-    <ExecutablePath>C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\Netwide Assembler;C:\cross-gcc\x86_64-elf\bin</ExecutablePath>
+    <ExecutablePath>$(Path)</ExecutablePath>
     <NMakeBuildCommandLine>cd $(ProjectDir)
 cd ..\..\build
 make -f kernel.mk all</NMakeBuildCommandLine>
