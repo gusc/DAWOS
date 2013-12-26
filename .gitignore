@@ -9,3 +9,9 @@
 /ide/VCExpress2010/*.user
 
 /build/*.log
+/test/*.log
+/test/*.nvram
+/test/bochsout.txt
+/test/Logs
+/test/*.vmsd
+/test/*.vmxf

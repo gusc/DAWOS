@@ -73,15 +73,13 @@
     <IntDir>..\..\build\</IntDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MBR|Win32'">
     <ExecutablePath>C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\Netwide Assembler;C:\cross-gcc\i786-elf\bin;C:\cross-gcc\x86_64-elf\bin</ExecutablePath>
     <NMakeBuildCommandLine>cd $(ProjectDir)
 cd ..\..\build
-make -f bios.mk all</NMakeBuildCommandLine>
+make -f bios.mk all
+buildimg.bat</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>$(NMakeBuildCommandLine)</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>cd $(ProjectDir)
 cd ..\..\build
