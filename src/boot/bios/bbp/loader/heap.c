@@ -41,15 +41,45 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	#include "debug_print.h"
 #endif
 
+#define HEAP_MAGIC 0xFFFFC0CAC01AFFFF
+
+#define HEAP_GET_FOOTER(h) (((uint8 *)h) + ((heap_header_t *)h)->block.size + sizeof(heap_header_t))
+#define HEAP_GET_HEADER(f) (((heap_footer_t *)f)->header)
+#define HEAP_PAYLOAD_HEADER(p) (((uint8 *)p) - sizeof(heap_header_t))
+#define HEAP_PAYLOAD_FOOTER(p) (HEAP_GET_FOOTER(HEAP_PAYLOAD_HEADER(p)))
+#define HEAP_GET_PAYLOAD(h) (((uint8 *)h) + sizeof(heap_header_t))
+#define HEAP_CHECK_HEADER(h) (((heap_header_t *)h)->magic == HEAP_MAGIC)
+#define HEAP_CHECK_FOOTER(f) (((heap_footer_t *)f)->magic == HEAP_MAGIC && ((heap_footer_t *)f)->header->magic == HEAP_MAGIC)
+
 /**
-* Free block header structure
+* Heap block header structure
 */
-typedef struct free_header_s free_header_t;
-struct free_header_s {
-	uint64 block_size;
-	free_header_t *prev_block;
-	free_header_t *next_block;
-};
+struct heap_header_struct {
+	uint64 magic;
+	struct {
+		uint64 used       : 1;
+		uint64 reserved   : 3; // Planned to implement locks and read/write attributes
+		uint64 size : 60;
+	} block;
+} __PACKED;
+typedef struct heap_header_struct heap_header_t;
+/**
+* Heap block footer structure
+*/
+struct heap_footer_struct {
+	uint64 magic;
+	heap_header_t *header;
+} __PACKED;
+typedef struct heap_footer_struct heap_footer_t;
+/**
+* Free block structure - header + pointers to next and previous blocks
+*/
+typedef struct free_block_struct free_block_t;
+struct free_block_struct {
+	heap_header_t header;
+	free_block_t *prev_block;
+	free_block_t *next_block;
+} __PACKED;
 
 static uint64 heap_start;
 static uint64 heap_size;
@@ -64,28 +94,29 @@ static uint64 heap_size;
 // 7 - 113 to 128 -"- 144 bytes
 // etc.
 // We should'n use more lists as it would expand past page boundaries
-static free_header_t *free_list[HEAP_LIST_COUNT];
+static free_block_t *free_list[HEAP_LIST_COUNT];
 // Binary search tree for blocks larger than 2048 bytes
 // Single page of size 4096 can hold a payload of 4080 bytes
 // next block is larger in size
 // prev block is smaller in size
-static free_header_t *free_tree;
+static free_block_t *free_tree;
 
 /**
 * Create a free block and write it's header information
 * @param free_block - pointer to free block
 * @param psize - payload size
 */
-static void heap_create_free(free_header_t *free_block, uint64 psize){
-	uint8 *ptr = (uint8 *)free_block;
+static void heap_create_free(free_block_t *free_block, uint64 psize){
 	psize = HEAP_ALIGN(psize);
 
 	// Set header
-	free_block->block_size = psize;
+	free_block->header.magic = HEAP_MAGIC;
+	free_block->header.block.size = psize;
 	// Move to footer
-	ptr += (psize + sizeof(uint64));
+	heap_footer_t *footer = (heap_footer_t *)HEAP_GET_FOOTER(free_block);
 	// Set footer
-	*((uint64 *)ptr) = psize;
+	footer->header = &free_block->header;
+	footer->magic = HEAP_MAGIC;
 }
 /**
 * Get list index from payload size
@@ -105,13 +136,13 @@ static int8 heap_size_idx(uint64 psize){
 * @param psize - new payload size
 * @return newly created free block
 */
-static free_header_t *heap_split(free_header_t *free_block, uint64 psize){
+static free_block_t *heap_split(free_block_t *free_block, uint64 psize){
 	// Caclutate leftover payload size
 	psize = HEAP_ALIGN(psize);
-	uint64 psize_other = free_block->block_size - (4 * sizeof(uint64)) - psize;
+	uint64 psize_other = free_block->header.block.size - (2 * (sizeof(heap_header_t) + sizeof(heap_footer_t))) - psize;
 	if (psize_other > HEAP_LIST_MIN){
 		// Split if the leftover is large enough
-		free_header_t *free_other = (free_header_t *)(((uint8 *)free_block) + psize + (2 * sizeof(uint64)));
+		free_block_t *free_other = (free_block_t *)(((uint8 *)free_block) + psize + (sizeof(heap_header_t) + sizeof(heap_footer_t)));
 		// Create new block
 		heap_create_free(free_other, psize_other);
 		// Recreate the old block
@@ -124,8 +155,8 @@ static free_header_t *heap_split(free_header_t *free_block, uint64 psize){
 * Add a free block to the segregated list or a binary search tree
 * @param free_block - block to add
 */
-static void heap_add_free(free_header_t *free_block){
-	int8 list_idx = heap_size_idx(free_block->block_size);
+static void heap_add_free(free_block_t *free_block){
+	int8 list_idx = heap_size_idx(free_block->header.block.size);
 	if (list_idx >= 0){
 		free_block->next_block = free_list[list_idx];
 		if (free_block->next_block != 0){
@@ -136,7 +167,7 @@ static void heap_add_free(free_header_t *free_block){
 		if (free_tree == 0){
 			// As easy as it can be
 			free_tree = free_block;
-		} else if (free_block->block_size == free_tree->block_size){
+		} else if (free_block->header.block.size == free_tree->header.block.size){
 			// Add to the right
 			if (free_tree->next_block != 0){
 				free_tree->next_block->prev_block = free_block;
@@ -144,10 +175,10 @@ static void heap_add_free(free_header_t *free_block){
 			free_block->next_block = free_tree->next_block;
 			free_block->prev_block = free_tree;
 			free_tree->next_block = free_block;
-		} else if (free_block->block_size > free_tree->block_size){
+		} else if (free_block->header.block.size > free_tree->header.block.size){
 			// Move to the right and insert the block right before the larger block
-			free_header_t *free_right = free_tree;
-			while (free_right->next_block != 0 && free_right->next_block->block_size < free_block->block_size){
+			free_block_t *free_right = free_tree;
+			while (free_right->next_block != 0 && free_right->next_block->header.block.size < free_block->header.block.size){
 				free_right = free_right->next_block;
 			}
 			if (free_right->next_block != 0){
@@ -160,8 +191,8 @@ static void heap_add_free(free_header_t *free_block){
 			free_right->next_block = free_block;
 		} else {
 			// Move to the left and insert the block right before the smaller block
-			free_header_t *free_left = free_tree;
-			while (free_left->prev_block != 0 && free_left->prev_block->block_size > free_block->block_size){
+			free_block_t *free_left = free_tree;
+			while (free_left->prev_block != 0 && free_left->prev_block->header.block.size > free_block->header.block.size){
 				free_left = free_left->prev_block;
 			}
 			if (free_left->prev_block != 0){
@@ -179,8 +210,8 @@ static void heap_add_free(free_header_t *free_block){
 * Remove a free block from the segregated list or a binary search tree
 * @param free_block - block to remove
 */
-static void heap_remove_free(free_header_t *free_block){
-	uint64 psize = free_block->block_size - (2 * sizeof(uint64));
+static void heap_remove_free(free_block_t *free_block){
+	uint64 psize = free_block->header.block.size - (sizeof(heap_header_t) + sizeof(heap_footer_t));
 	int8 list_idx = heap_size_idx(psize);
 	if (list_idx >= 0){
 		if (free_block->prev_block == 0){
@@ -238,8 +269,8 @@ static void heap_remove_free(free_header_t *free_block){
 * @param psize - required payload size
 * @return a free block or 0
 */
-static free_header_t *heap_find_free(uint64 psize){
-	free_header_t *free_block = 0;
+static free_block_t *heap_find_free(uint64 psize){
+	free_block_t *free_block = 0;
 	psize = HEAP_ALIGN(psize);
 	int8 list_idx = heap_size_idx(psize);
 	if (list_idx >= 0){
@@ -256,31 +287,31 @@ static free_header_t *heap_find_free(uint64 psize){
 	}
 	if (free_block == 0){
 		// Get used size
-		uint64 usize = psize + (2 * sizeof(uint64));
+		uint64 usize = psize + (sizeof(heap_header_t) + sizeof(heap_footer_t));
 	
-		if (usize == free_tree->block_size){
+		if (usize == free_tree->header.block.size){
 			// Bingo!
 			free_block = free_tree;
-		} else if (usize > free_tree->block_size){
+		} else if (usize > free_tree->header.block.size){
 			// Go right
-			free_header_t *free_right = free_tree;
-			while (free_right->next_block != 0 && usize > free_right->next_block->block_size){
+			free_block_t *free_right = free_tree;
+			while (free_right->next_block != 0 && usize > free_right->next_block->header.block.size){
 				free_right = free_right->next_block;
 			}
-			if (usize <= free_right->block_size){
+			if (usize <= free_right->header.block.size){
 				free_block = free_right;
 			}
-		} else if (usize < free_tree->block_size){
+		} else if (usize < free_tree->header.block.size){
 			// Go left
-			free_header_t *free_left = free_tree;
-			while (free_left->prev_block != 0 && usize < free_left->prev_block->block_size){
+			free_block_t *free_left = free_tree;
+			while (free_left->prev_block != 0 && usize < free_left->prev_block->header.block.size){
 				free_left = free_left->prev_block;
 			}
-			if (usize <= free_left->block_size){
+			if (usize <= free_left->header.block.size){
 				free_block = free_left;
 			} else if (free_left->next_block != 0){
 				free_left = free_left->next_block;
-				if (usize <= free_left->block_size){
+				if (usize <= free_left->header.block.size){
 					free_block = free_left;
 				}
 			}
@@ -293,12 +324,12 @@ static free_header_t *heap_find_free(uint64 psize){
 * @param size - required payload size
 * @return a new free block
 */
-static free_header_t * heap_extend(uint64 psize){
+static free_block_t * heap_extend(uint64 psize){
 	psize = HEAP_ALIGN(psize);
-	uint64 usize = psize + (2 * sizeof(uint64));
+	uint64 usize = psize + (sizeof(heap_header_t) + sizeof(heap_footer_t));
 	usize = PAGE_SIZE_ALIGN(usize);
 	
-	free_header_t *free_block = (free_header_t *)(((uint8 *)heap_start) + heap_size);
+	free_block_t *free_block = (free_block_t *)(((uint8 *)heap_start) + heap_size);
 	uint64 page_size = usize;
 	uint64 page_addr = (uint64)free_block;
 	while (page_size > 0){
@@ -308,7 +339,7 @@ static free_header_t * heap_extend(uint64 psize){
 	}
 	heap_size += usize;
 
-	heap_create_free(free_block, (usize - (2 * sizeof(uint64))));
+	heap_create_free(free_block, (usize - (sizeof(heap_header_t) + sizeof(heap_footer_t))));
 	heap_add_free(free_block);
 
 	return free_block;
@@ -323,41 +354,37 @@ void heap_init(uint64 start, uint64 isize){
 		free_list[i] = 0;
 	}
 	// Initialize first block covering the whole heap
-	free_tree = (free_header_t *)heap_start;
-	heap_create_free(free_tree, heap_size - (2 * sizeof(uint64)));
+	free_tree = (free_block_t *)heap_start;
+	heap_create_free(free_tree, heap_size - (sizeof(heap_header_t) + sizeof(heap_footer_t)));
 }
 
 void *heap_alloc(uint64 psize){
-	free_header_t *free_block = 0;
+	free_block_t *free_block = 0;
 
 	// Align the requested size to heap alignament
 	psize = HEAP_ALIGN(psize);
-	uint64 usize = psize + (1 * sizeof(uint64));
 	
 	// Find the block in the list
 	free_block = heap_find_free(psize);
 	if (free_block == 0){
 		// Allocate a new page if all the free space has been used
-		free_header_t *free_block = heap_extend(psize);
+		free_block_t *free_block = heap_extend(psize);
 	}
 	if (free_block != 0){
 		// Remove block
 		heap_remove_free(free_block);
 
 		// Split block if possible
-		free_header_t *free_other = heap_split(free_block, psize);
+		free_block_t *free_other = heap_split(free_block, psize);
 		if (free_other != 0){
 			// If there are left overs - add them to list or a tree
 			heap_add_free(free_other);
 		}
 
 		// Mark used in header
-		free_block->block_size |= 1;
-		// Mark used in footer
-		*((uint64 *)(((uint8 *)free_block) + usize)) = free_block->block_size;
-
+		free_block->header.block.used = 1;
 		// Return a pointer to the payload
-		return (void *)(((uint64 *)free_block) + 1);
+		return (void *)HEAP_GET_PAYLOAD(free_block);
 	}
 	return 0;
 }
@@ -368,42 +395,44 @@ void *heap_realloc(void *ptr, uint64 psize){
 }
 
 void heap_free(void *ptr){
-	free_header_t *free_block = (free_header_t *)(((uint64 *)ptr) - 1);
-	uint64 *ptr_b = (uint64 *)free_block;
+	free_block_t *free_block = (free_block_t *)HEAP_PAYLOAD_HEADER(ptr);
+	if (HEAP_CHECK_HEADER(free_block)){
+		heap_footer_t *prev_footer;
+		heap_header_t *next_header;
+		uint64 *ptr_b = (uint64 *)free_block;
 
-	// Clear used in header
-	free_block->block_size &= ((uint64)-2);
-	uint64 usize = free_block->block_size;
+		// Clear used in header
+		free_block->header.block.used = 0;
 
-	// Clear used in footer
-	*((uint64 *)(((uint8 *)free_block) + usize)) = free_block->block_size;
+		prev_footer = (heap_footer_t *)(((uint8 *)free_block) - sizeof(heap_footer_t));
+		if (HEAP_CHECK_FOOTER(prev_footer) && !prev_footer->header->block.used){
+			// Merge left
+			free_block_t *free_right = (free_block_t *)HEAP_GET_HEADER(prev_footer);
+			// Remove the right block
+			heap_remove_free(free_right);
+			// Create new block
+			heap_create_free(free_right, free_right->header.block.size + free_block->header.block.size - (sizeof(heap_header_t) + sizeof(heap_footer_t)));
+			// Add block to heap free lists of tree
+			free_block = free_right;
+		}
 
-	ptr_b --;
-	if (HEAP_IS_USED(ptr_b) == 0){
-		// Merge left
-		uint64 right_size = *ptr_b;
-		ptr_b = (uint64 *)(((uint8 *)ptr_b) - (right_size - sizeof(uint64)));
-		free_header_t *free_right = (free_header_t *)ptr_b;
-		// Remove the right block
-		heap_remove_free(free_right);
-		// Create new block
-		heap_create_free(free_right, free_right->block_size + free_block->block_size - (2 * sizeof(uint64)));
-		// Add block to heap free lists of tree
-		free_block = free_right;
-		ptr_b = (uint64 *)free_block;
+		next_header = (heap_header_t *)(((uint8 *)HEAP_GET_FOOTER(free_block)) + sizeof(heap_footer_t));
+		if (HEAP_CHECK_HEADER(next_header) && !next_header->block.used){
+			// Merge left
+			free_block_t *free_left = (free_block_t *)next_header;
+			// Remove the right block
+			heap_remove_free(free_left);
+			// Create new block
+			heap_create_free(free_block, free_block->header.block.size + free_left->header.block.size - (sizeof(heap_header_t) + sizeof(heap_footer_t)));
+		}
+
+		// Add this block back to list or tree
+		heap_add_free(free_block);
 	}
-
-	ptr_b = (uint64 *)(((uint8 *)ptr_b) + free_block->block_size);
-	if (HEAP_IS_USED(ptr_b) == 0){
-		// Merge left
-		uint64 left_size = *ptr_b;
-		free_header_t *free_left = (free_header_t *)ptr_b;
-		// Remove the right block
-		heap_remove_free(free_left);
-		// Create new block
-		heap_create_free(free_block, free_block->block_size + free_left->block_size - (2 * sizeof(uint64)));
-	}
-
-	// Add this block back to list or tree
-	heap_add_free(free_block);
 }
+
+#if DEBUG == 1
+void heap_list(){
+
+}
+#endif

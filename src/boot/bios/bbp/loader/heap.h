@@ -45,9 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Align to 16 byte boundary
 #define HEAP_MASK -16
 #define HEAP_IMASK 15
-
 #define HEAP_ALIGN(n) ((n + HEAP_IMASK) & HEAP_MASK)
-#define HEAP_IS_USED(p) (*p & 1)
 
 /**
 * Initialize heap
@@ -73,6 +71,13 @@ void *heap_realloc(void *ptr, uint64 psize);
 * @param ptr - memory block allocated previously
 */
 void heap_free(void *ptr);
+
+#if DEBUG == 1
+/**
+* List heap data for debug
+*/
+void heap_list();
+#endif
 
 
 #endif

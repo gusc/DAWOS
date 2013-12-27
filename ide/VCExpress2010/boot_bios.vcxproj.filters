@@ -80,13 +80,7 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\boot\main32.h">
       <Filter>bbp\boot</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\boot\bios\bbp\loader\acpi.h">
-      <Filter>bbp\loader</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\ahci.h">
-      <Filter>bbp\loader</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\boot\bios\bbp\loader\apic.h">
       <Filter>bbp\loader</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\common.h">
@@ -133,13 +127,7 @@
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main32.c">
       <Filter>bbp\boot</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\boot\bios\bbp\loader\acpi.c">
-      <Filter>bbp\loader</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\ahci.c">
-      <Filter>bbp\loader</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\boot\bios\bbp\loader\apic.c">
       <Filter>bbp\loader</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\debug_print.c">

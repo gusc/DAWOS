@@ -67,11 +67,19 @@ void kmain(){
 	// Initialize heap
 	heap_init(HEAP_LOC, HEAP_SIZE);
 
-	uint64 addr = (uint64)heap_alloc(64);
 #if DEBUG == 1
+	uint64 addr1 = (uint64)heap_alloc(32);
+	uint64 addr2 = (uint64)heap_alloc(32);
+	debug_print(DC_WB, "Heap alloc addr: %x", addr1);
+	debug_print(DC_WB, "Heap alloc addr: %x", addr2);
+	heap_free((void *)addr1);
+	heap_free((void *)addr2);
+	uint64 addr = (uint64)heap_alloc(64);
 	debug_print(DC_WB, "Heap alloc addr: %x", addr);
-#endif
 	heap_free((void *)addr);
+	heap_list();
+#endif
+	
 
 	// Initialize PCI
 	pci_init();

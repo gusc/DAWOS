@@ -32,9 +32,7 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\boot\main16.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\boot\main32.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\config.h" />
-    <ClInclude Include="..\..\src\boot\bios\bbp\loader\acpi.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\ahci.h" />
-    <ClInclude Include="..\..\src\boot\bios\bbp\loader\apic.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\common.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\cpuid.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\debug_print.h" />
@@ -51,9 +49,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main32.c" />
-    <ClCompile Include="..\..\src\boot\bios\bbp\loader\acpi.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\ahci.c" />
-    <ClCompile Include="..\..\src\boot\bios\bbp\loader\apic.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\debug_print.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\heap.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\interrupts.c" />
