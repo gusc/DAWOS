@@ -404,26 +404,31 @@ void heap_free(void *ptr){
 		// Clear used in header
 		free_block->header.block.used = 0;
 
-		prev_footer = (heap_footer_t *)(((uint8 *)free_block) - sizeof(heap_footer_t));
-		if (HEAP_CHECK_FOOTER(prev_footer) && !prev_footer->header->block.used){
-			// Merge left
-			free_block_t *free_right = (free_block_t *)HEAP_GET_HEADER(prev_footer);
-			// Remove the right block
-			heap_remove_free(free_right);
-			// Create new block
-			heap_create_free(free_right, free_right->header.block.size + free_block->header.block.size - (sizeof(heap_header_t) + sizeof(heap_footer_t)));
-			// Add block to heap free lists of tree
-			free_block = free_right;
+		if (((uint64)free_block) > heap_start){
+			prev_footer = (heap_footer_t *)(((uint8 *)free_block) - sizeof(heap_footer_t));
+			if (HEAP_CHECK_FOOTER(prev_footer) && !prev_footer->header->block.used){
+				// Merge left
+				free_block_t *free_right = (free_block_t *)HEAP_GET_HEADER(prev_footer);
+				// Remove the right block
+				heap_remove_free(free_right);
+				// Create new block
+				heap_create_free(free_right, free_right->header.block.size + free_block->header.block.size - (sizeof(heap_header_t) + sizeof(heap_footer_t)));
+				// Add block to heap free lists of tree
+				free_block = free_right;
+			}
 		}
 
-		next_header = (heap_header_t *)(((uint8 *)HEAP_GET_FOOTER(free_block)) + sizeof(heap_footer_t));
-		if (HEAP_CHECK_HEADER(next_header) && !next_header->block.used){
-			// Merge left
-			free_block_t *free_left = (free_block_t *)next_header;
-			// Remove the right block
-			heap_remove_free(free_left);
-			// Create new block
-			heap_create_free(free_block, free_block->header.block.size + free_left->header.block.size - (sizeof(heap_header_t) + sizeof(heap_footer_t)));
+		heap_footer_t *footer = (heap_footer_t *)HEAP_GET_FOOTER(free_block);
+		if (((uint64)footer) + sizeof(heap_footer_t) < heap_start + heap_size){
+			next_header = (heap_header_t *)(((uint8 *)footer) + sizeof(heap_footer_t));
+			if (HEAP_CHECK_HEADER(next_header) && !next_header->block.used){
+				// Merge left
+				free_block_t *free_left = (free_block_t *)next_header;
+				// Remove the right block
+				heap_remove_free(free_left);
+				// Create new block
+				heap_create_free(free_block, free_block->header.block.size + free_left->header.block.size - (sizeof(heap_header_t) + sizeof(heap_footer_t)));
+			}
 		}
 
 		// Add this block back to list or tree
