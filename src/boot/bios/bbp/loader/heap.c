@@ -236,10 +236,11 @@ static void heap_add_free(free_block_t *free_block){
 		}
 		free_list[list_idx] = free_block;
 	} else {
+		uint64 tree_usize = HEAP_GET_USIZE(free_tree);
 		if (free_tree == 0){
 			// As easy as it can be
 			free_tree = free_block;
-		} else if (usize == free_tree->header.block.size){
+		} else if (usize == tree_usize){
 			// Add to the right
 			if (free_tree->next_block != 0){
 				free_tree->next_block->prev_block = free_block;
@@ -247,7 +248,7 @@ static void heap_add_free(free_block_t *free_block){
 			free_block->next_block = free_tree->next_block;
 			free_block->prev_block = free_tree;
 			free_tree->next_block = free_block;
-		} else if (usize > free_tree->header.block.size){
+		} else if (usize > tree_usize){
 			// Move to the right and insert the block right before the larger block
 			free_block_t *free_right = free_tree;
 			while (free_right->next_block != 0 && HEAP_GET_USIZE(free_right->next_block) < usize){
@@ -375,7 +376,7 @@ static free_block_t *heap_find_free(uint64 psize){
 			if (usize <= HEAP_GET_USIZE(free_right)){
 				free_block = free_right;
 			}
-		} else if (usize < tree_usize){
+		} else {
 			// Go left
 			free_block_t *free_left = free_tree;
 			while (free_left->prev_block != 0 && usize < HEAP_GET_USIZE(free_left->prev_block)){
