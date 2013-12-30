@@ -43,8 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "common.h"
 
 // Align to 16 byte boundary
-#define HEAP_MASK -16
-#define HEAP_IMASK 15
+#define HEAP_MASK  0xFFFFFFFFFFFFFFF0 // -16
+#define HEAP_IMASK 0x000000000000000F // 15
 /**
 * Size align to the minimum size of the heap
 * @param psize - payload size
