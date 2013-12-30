@@ -69,13 +69,26 @@ void kmain(){
 
 #if DEBUG == 1
 	uint64 addr1 = (uint64)heap_alloc(32);
+	debug_print(DC_WB, "Allocate 32 bytes @%x", addr1);	
+	heap_list();
+
 	uint64 addr2 = (uint64)heap_alloc(32);
-	debug_print(DC_WB, "Heap alloc addr: %x", addr1);
-	debug_print(DC_WB, "Heap alloc addr: %x", addr2);
+	debug_print(DC_WB, "Allocate 32 bytes @%x", addr2);
+	heap_list();
+
+	debug_print(DC_WB, "Deallocate @%x", addr1);
 	heap_free((void *)addr1);
+	heap_list();
+
+	debug_print(DC_WB, "Deallocate @%x", addr2);
 	heap_free((void *)addr2);
+	heap_list();
+
 	uint64 addr = (uint64)heap_alloc(64);
-	debug_print(DC_WB, "Heap alloc addr: %x", addr);
+	debug_print(DC_WB, "Allocate 64 bytes @%x", addr);
+	heap_list();
+
+	debug_print(DC_WB, "Deallocate @%x", addr);
 	heap_free((void *)addr);
 	heap_list();
 #endif

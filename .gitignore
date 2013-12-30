@@ -16,3 +16,7 @@
 /test/*.vmsd
 /test/*.vmxf
 /test/*.vbox-prev
+
+*.o
+
+/bin/*.img

@@ -45,7 +45,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Align to 16 byte boundary
 #define HEAP_MASK -16
 #define HEAP_IMASK 15
-#define HEAP_ALIGN(n) ((n + HEAP_IMASK) & HEAP_MASK)
+/**
+* Size align to the minimum size of the heap
+* @param psize - payload size
+* @return heap aligned payload size
+*/
+#define HEAP_ALIGN(psize) ((psize + HEAP_IMASK) & HEAP_MASK)
 
 /**
 * Initialize heap
