@@ -1,5 +1,4 @@
 /*
-
 Memory paging functions
 =======================
 
@@ -46,11 +45,14 @@ typedef union {
 		uint64 write_through	: 1;	// Do we want write-trough? (when cached, this also writes to memory)
 		uint64 cache_disable	: 1;	// Disable cache on this page?
 		uint64 accessed			: 1;	// Has the page been accessed by software?
-		uint64 dirty			: 1;	// Has the page been written to since last refresh?
-		uint64 pat				: 1;	// Is the page a PAT? (dunno what it is)
-		uint64 global			: 1;	// Is the page global? (dunno what it is)
-		uint64 data				: 3;	// Available for kernel use (do what you want?)
-		uint64 frame			: 52;	// Frame address (shifted right 12 bits)
+		uint64 dirty			: 1;	// Has the page been written to since last refresh? (ignored in PML4E, PML3E, PML2E)
+		uint64 pat				: 1;	// Page attribute table (in PML1E), 
+										// page size bit (must be 0 in PML4E, in PML3E 1 = 1GB page size, in PML2E 1 = 2MB page size otherwise 4KB pages are used)
+		uint64 global			: 1;	// Is the page global? (ignored in PML4E, PML3E, PML2E)
+		uint64 data				: 3;	// Ignored (ignored in all PML levels)
+		uint64 frame			: 40;	// Frame address (4KB aligned)
+		uint64 data2			: 11;	// Ignored (ignored in all PML levels)
+		uint64 xd				: 1;	// Execute disable bit (whole region is not accessible by instruction fetch)
 	} s;
 	uint64 raw;							// Raw value
 } pm_t;

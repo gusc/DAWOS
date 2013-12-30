@@ -251,8 +251,6 @@ uint64 page_map(uint64 paddr){
 		_pml4[va.s.drawer_idx].raw = (uint64)pml3;
 		_pml4[va.s.drawer_idx].s.present = 1;
 		_pml4[va.s.drawer_idx].s.writable = 1;
-		//_pml4[va.s.drawer_idx].s.write_through = 1;
-		//_pml4[va.s.drawer_idx].s.cache_disable = 1;
 		_page_offset += (sizeof(pm_t) * 512);
 	}
 	pml3 = (pm_t *)(_pml4[va.s.drawer_idx].raw & PAGE_MASK);
@@ -263,8 +261,6 @@ uint64 page_map(uint64 paddr){
 		pml3[va.s.directory_idx].raw = (uint64)pml2;
 		pml3[va.s.directory_idx].s.present = 1;
 		pml3[va.s.directory_idx].s.writable = 1;
-		//pml3[va.s.directory_idx].s.write_through = 1;
-		//pml3[va.s.directory_idx].s.cache_disable = 1;
 		_page_offset += (sizeof(pm_t) * 512);
 	}
 	pml2 = (pm_t *)(pml3[va.s.directory_idx].raw & PAGE_MASK);
@@ -275,8 +271,6 @@ uint64 page_map(uint64 paddr){
 		pml2[va.s.table_idx].raw = (uint64)pml1;
 		pml2[va.s.table_idx].s.present = 1;
 		pml2[va.s.table_idx].s.writable = 1;
-		//pml2[va.s.table_idx].s.write_through = 1;
-		//pml2[va.s.table_idx].s.cache_disable = 1;
 		_page_offset += (sizeof(pm_t) * 512);
 	}
 	pml1 = (pm_t *)(pml2[va.s.table_idx].raw & PAGE_MASK);
@@ -284,8 +278,6 @@ uint64 page_map(uint64 paddr){
 		pml1[va.s.page_idx].raw = (paddr & PAGE_MASK);
 		pml1[va.s.page_idx].s.present = 1;
 		pml1[va.s.page_idx].s.writable = 1;
-		//pml1[va.s.page_idx].s.write_through = 1;
-		//pml1[va.s.page_idx].s.cache_disable = 1;
 	}	
 	return va.raw;
 }
