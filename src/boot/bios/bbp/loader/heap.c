@@ -82,11 +82,17 @@ struct free_block_struct {
 
 #define HEAP_OVERHEAD (sizeof(heap_header_t) + sizeof(heap_footer_t))
 /**
-* Get the size of memory block from the size of the payload size
+* Get the size of memory block from the size of the payload
 * @param psize - payload size
 * @return usize - used size
 */
 #define HEAP_USIZE(psize) (HEAP_ALIGN(psize) + HEAP_OVERHEAD)
+/**
+* Get the size of the payload from the size of the block
+* @param usize - used size
+* @return psize - payload size
+*/
+#define HEAP_PSIZE(usize) (usize - HEAP_OVERHEAD)
 /**
 * Get the size of memory block from the header
 * @param h - pointer to the header
@@ -420,9 +426,12 @@ static free_block_t * heap_extend(uint64 psize){
 	return free_block;
 }
 
-void heap_init(uint64 start, uint64 isize){
-	heap_start = start;
-	heap_size = isize;
+// Import placement_addr32 from 32bit mode
+extern uint32 placement_addr32;
+
+void heap_init(){
+	heap_start = (uint64)placement_addr32;
+	heap_size = INIT_MEM - heap_start;
 	// Initialize empty lists
 	uint8 i = 0;
 	for (i = 0; i < HEAP_LIST_COUNT; i ++){
@@ -433,7 +442,7 @@ void heap_init(uint64 start, uint64 isize){
 	heap_create_free(free_tree, heap_size - HEAP_OVERHEAD);
 }
 
-void *heap_alloc(uint64 psize){
+void *heap_alloc_align(uint64 psize, uint64 align){
 	free_block_t *free_block = 0;
 
 	// Align the requested size to heap alignament
@@ -462,6 +471,9 @@ void *heap_alloc(uint64 psize){
 		return (void *)HEAP_GET_PAYLOAD(free_block);
 	}
 	return 0;
+}
+void *heap_alloc(uint64 psize){
+	return heap_alloc_align(psize, 0);
 }
 
 void *heap_realloc(void *ptr, uint64 psize){
@@ -509,6 +521,14 @@ void heap_free(void *ptr){
 		// Add this block back to list or tree
 		heap_add_free(free_block);
 	}
+}
+
+uint64 heap_alloc_size(void *ptr){
+	free_block_t *free_block = (free_block_t *)HEAP_PAYLOAD_HEADER(ptr);
+	if (HEAP_CHECK_HEADER(free_block)){
+		return HEAP_PSIZE(HEAP_GET_USIZE(free_block));
+	}
+	return 0;
 }
 
 #if DEBUG == 1

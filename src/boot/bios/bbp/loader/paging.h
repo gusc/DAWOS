@@ -70,8 +70,9 @@ typedef union {
 } vaddr_t;
 
 // Page masks
-#define PAGE_MASK          0xFFFFFFFFFFFFF000
-#define PAGE_IMASK         0x0000000000000FFF // Inverse mask
+#define PAGE_IMASK         (PAGE_SIZE - 1) // Inverse mask
+#define PAGE_MASK          (~PAGE_IMASK)
+// Virtual address parts masks
 #define PAGE_PML4_IDX_MASK 0xFF8000000000
 #define PAGE_PML3_IDX_MASK 0x7FC0000000
 #define PAGE_PML2_IDX_MASK 0x3FE00000

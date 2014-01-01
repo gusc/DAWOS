@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "../config.h"
 #include "paging.h"
+#include "heap.h"
 #include "lib.h"
 #if DEBUG == 1
 	#include "debug_print.h"
@@ -73,12 +74,12 @@ typedef struct e820map_struct e820map_t;
 /**
 * Page table structures
 */
-static pm_t *_pml4 = (pm_t *)PT_LOC;
-static uint64 _page_offset = PT_LOC;
+static pm_t *_pml4;
 
 static uint64 _total_mem = 0;
 static uint64 _available_mem = 0;
 
+static uint64 _page_offset = 0;
 static uint64 *_page_frames;
 static uint64 _page_count = 0;
 
@@ -120,9 +121,10 @@ static bool page_check_frame(uint64 paddr){
 }
 
 /**
-* Sort memory map in ascending order
+* Parse memory map and sort in ascending order
+* Also determine maximum size and available size
 */
-static void sort_e820(e820map_t *mem_map){
+static void parse_e820(e820map_t *mem_map){
 	uint64 i = 0;
 	// Do the bubble sort to make them in ascending order
 	e820entry_t e;
@@ -158,11 +160,15 @@ static void sort_e820(e820map_t *mem_map){
 	}
 }
 
-void page_init(){
+// Import pml4_ptr32 from 32bit mode
+extern uint32 pml4_ptr32;
+
+void page_init(uint64 ammount){
+	_pml4 = (pm_t *)((uint64)pml4_ptr32);
 	// Read E820 memory map and mark used regions
 	e820map_t *mem_map = (e820map_t *)E820_LOC;
-	// Sort memory map
-	sort_e820(mem_map);
+	// Parse memory map
+	parse_e820(mem_map);
 		
 	// Single page (PML1 entry) holds 4KB of RAM
 	uint64 page_count = INIT_MEM / PAGE_SIZE;
@@ -185,21 +191,16 @@ void page_init(){
 		drawer_count ++;
 	}
 
-	// Determine the end of PMLx structures to add new ones
-	_page_offset += (sizeof(pm_t) * 512) * (1 + drawer_count + directory_count + table_count);
 	// Calculate total frame count
 	_page_count = _total_mem / PAGE_SIZE;
 	// Allocate frame bitset at the next page boundary
-	_page_frames = (uint64 *)_page_offset;
+	_page_frames = (uint64 *)heap_alloc(_page_count / 8);
 	// Clear bitset
-	mem_fill((uint8 *)_page_count, _page_count / 8, 0);
-	// Move offset further
-	_page_offset += (_page_count / 8);
-	// Align the offset
-	if ((_page_offset & PAGE_MASK) != _page_offset){
-		_page_offset &= PAGE_MASK;
-		_page_offset += PAGE_SIZE;
-	}
+	mem_fill((uint8 *)_page_frames, _page_count / 8, 0);
+	
+	_page_offset = (uint64)_page_frames;
+	_page_offset += _page_count / 8;
+	_page_offset = PAGE_SIZE_ALIGN(_page_offset);
 
 #if DEBUG == 1
 	debug_print(DC_WB, "Frames: %d", _page_count);

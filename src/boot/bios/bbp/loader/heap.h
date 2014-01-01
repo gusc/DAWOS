@@ -43,21 +43,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "common.h"
 
 // Align to 16 byte boundary
-#define HEAP_MASK  0xFFFFFFFFFFFFFFF0 // -16
-#define HEAP_IMASK 0x000000000000000F // 15
+#define HEAP_IMASK (HEAP_LIST_MIN - 1) // 15
+#define HEAP_MASK  (~HEAP_IMASK) // -16
+
 /**
 * Size align to the minimum size of the heap
 * @param psize - payload size
 * @return heap aligned payload size
 */
 #define HEAP_ALIGN(psize) ((psize + HEAP_IMASK) & HEAP_MASK)
+// Element size distribution in segregated lists (let's put it the same size as minimum)
+#define HEAP_LIST_SPARSE HEAP_LIST_MIN
+// Segregated list count
+#define HEAP_LIST_COUNT ((HEAP_LIST_MAX - HEAP_LIST_MIN) / HEAP_LIST_SPARSE)
 
 /**
 * Initialize heap
 * @param start - start address of the heap
 * @param isize - initial size of the heap
 */
-void heap_init(uint64 start, uint64 isize);
+void heap_init();
+/**
+* Allocate a block of memory on the heap
+* @param psize - size of a block to allocate (payload size)
+* @param align - align the start of the block to this size
+* @return new pointer to the memory block allocated or 0
+*/
+void *heap_alloc_align(uint64 psize, uint64 align);
 /**
 * Allocate a block of memory on the heap
 * @param psize - size of a block to allocate (payload size)
@@ -76,6 +88,13 @@ void *heap_realloc(void *ptr, uint64 psize);
 * @param ptr - memory block allocated previously
 */
 void heap_free(void *ptr);
+/**
+* Get the allocated size of the pointer (alignament forces to allocate more memory than requested)
+* knowing the real size might come in handy in utilizing the memory overhead
+* @param ptr - memory block allocated previously
+* @return the allocated size of this block
+*/
+uint64 heap_alloc_size(void *ptr);
 
 #if DEBUG == 1
 /**

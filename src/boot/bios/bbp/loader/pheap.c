@@ -43,7 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	#include "debug_print.h"
 #endif
 
-uint64 placement_address = PADDR_LOC;
+extern uint32 placement_addr32;
+uint64 placement_addr;
 
 /**
 * Allocate a block of memory on the heap
@@ -53,11 +54,15 @@ uint64 placement_address = PADDR_LOC;
 */
 static void *pheap_alloc_block(uint64 psize, bool aligned){
 	if (aligned){
-		placement_address = PAGE_SIZE_ALIGN(placement_address);
+		placement_addr = PAGE_SIZE_ALIGN(placement_addr);
 	}
-	uint64 tmp = placement_address;
-	placement_address += psize;
+	uint64 tmp = placement_addr;
+	placement_addr += psize;
 	return (void *)tmp;
+}
+
+void pheap_init(){
+	placement_addr = (uint64)placement_addr32;
 }
 
 void *pheap_alloc(uint64 psize){

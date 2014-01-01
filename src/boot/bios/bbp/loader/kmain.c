@@ -60,12 +60,12 @@ void kmain(){
 	debug_print(DC_WB, "Long mode");
 #endif
 
+	// Initialize heap
+	heap_init();
 	// Initialize paging (well, actually re-initialize)
 	page_init();
 	// Initialize interrupts
 	interrupt_init();
-	// Initialize heap
-	heap_init(HEAP_LOC, HEAP_SIZE);
 
 #if DEBUG == 1
 	uint64 addr1 = (uint64)heap_alloc(32);

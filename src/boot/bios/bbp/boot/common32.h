@@ -73,5 +73,6 @@ typedef void *handle_t;
 #define null 0
 #define true 1
 #define false 0
+#define bool uint8
 
 #endif /* __common32_h */

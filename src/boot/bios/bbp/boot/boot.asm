@@ -172,8 +172,14 @@ start64:										; Long Mode entry point
 
 ; PML4 pointer (for 32bit CR3)
 pml4_ptr32:
-	dd 0										; Dummy entry - we'll populate it in main32 and later in kmain
+	dd 0										; Dummy entry - we'll populate it in main32 and use it in kmain
 pml4_ptr32_end:
+
+[global placement_addr32]						; Make heap placement address pointer accessible from C
+
+placement_addr32:
+	dd 0										; Dummy entry - we'll populate it in main32 and use it in kmain
+placement_addr32_end:
 
 [section .rodata]
 

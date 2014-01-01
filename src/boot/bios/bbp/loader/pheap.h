@@ -41,6 +41,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "common.h"
 
 /**
+* Initialize placement heap
+*/
+void pheap_init();
+/**
 * Allocate a block of memory on the heap
 * @param psize - size of a block to allocate (payload size)
 * @return new pointer to the memory block allocated or 0
