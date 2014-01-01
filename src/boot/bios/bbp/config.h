@@ -58,8 +58,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // E820 memory map location
 #define E820_LOC 0x0800
-// Default page size
+// Default page alignament size
 #define PAGE_SIZE 0x1000 // 4KB
+// Number of paging levels (4 = 4KB pages, 3 = 2MB pages, 2 = 1GB pages)
+// currently only 4 level paging is implemented
+#define PAGE_LEVELS 4
 // Initial memory size to map to enter Long Mode
 // we don't to map all the memory, but it should be more than 1MB
 // as the heap and PMLx structures will be located at the 1MB mark

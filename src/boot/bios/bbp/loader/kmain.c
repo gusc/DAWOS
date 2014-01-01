@@ -66,7 +66,9 @@ void kmain(){
 	page_init();
 	// Initialize interrupts
 	interrupt_init();
-
+	// Initialize kernel heap allocator
+	heap_init_alloc();
+	
 #if DEBUG == 1
 	uint64 addr1 = (uint64)heap_alloc(32);
 	debug_print(DC_WB, "Allocate 32 bytes @%x", addr1);	
@@ -92,7 +94,6 @@ void kmain(){
 	heap_free((void *)addr);
 	heap_list();
 #endif
-	
 
 	// Initialize PCI
 	pci_init();

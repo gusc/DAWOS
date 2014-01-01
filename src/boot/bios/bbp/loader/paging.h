@@ -77,7 +77,13 @@ typedef union {
 #define PAGE_PML3_IDX_MASK 0x7FC0000000
 #define PAGE_PML2_IDX_MASK 0x3FE00000
 #define PAGE_PML1_IDX_MASK 0x1FF000
-#define PAGE_OFFSET_MASK   0xFFF
+#if PAGE_LEVELS == 2
+	#define PAGE_OFFSET_MASK   0x3FFFFF
+#elif PAGE_LEVELS == 3
+	#define PAGE_OFFSET_MASK   0x1FFFFF
+#else
+	#define PAGE_OFFSET_MASK   0xFFF
+#endif
 // Get table entry index from virtual address
 #define PAGE_PML4_IDX(va) ((va & PAGE_PML4_IDX_MASK) >> 39)
 #define PAGE_PML3_IDX(va) ((va & PAGE_PML3_IDX_MASK) >> 30)

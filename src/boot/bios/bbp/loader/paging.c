@@ -75,6 +75,8 @@ typedef struct e820map_struct e820map_t;
 * Page table structures
 */
 static pm_t *_pml4;
+// Import pml4_ptr32 from 32bit mode
+extern uint32 pml4_ptr32;
 
 static uint64 _total_mem = 0;
 static uint64 _available_mem = 0;
@@ -160,9 +162,6 @@ static void parse_e820(e820map_t *mem_map){
 	}
 }
 
-// Import pml4_ptr32 from 32bit mode
-extern uint32 pml4_ptr32;
-
 void page_init(uint64 ammount){
 	_pml4 = (pm_t *)((uint64)pml4_ptr32);
 	// Read E820 memory map and mark used regions
@@ -176,10 +175,6 @@ void page_init(uint64 ammount){
 	_page_frames = (uint64 *)heap_alloc(_page_count / 8);
 	// Clear bitset
 	mem_fill((uint8 *)_page_frames, _page_count / 8, 0);
-	
-	_page_offset = (uint64)_page_frames;
-	_page_offset += _page_count / 8;
-	_page_offset = PAGE_SIZE_ALIGN(_page_offset);
 
 #if DEBUG == 1
 	debug_print(DC_WB, "Frames: %d", _page_count);
@@ -200,6 +195,10 @@ void page_init(uint64 ammount){
 			}
 		}
 	}
+
+	_page_offset = (uint64)_page_frames;
+	_page_offset += _page_count / 8;
+	_page_offset = PAGE_SIZE_ALIGN(_page_offset);
 }
 uint64 page_total_mem(){
 	return _total_mem;

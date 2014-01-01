@@ -65,12 +65,12 @@ static void mem_clear(uint8 *dest, uint32 len){
 }
 /**
 * Allocate a block of memory on the heap
-* @param psize - size of a block to allocate (payload size)
-* @param aligned - weather to align the block to page boundary
+* @param psize - payload size
+* @param align - align the block the page boundary
 * @return new pointer to the memory block allocated or 0
 */
-static void *pheap_alloc_block(uint64 psize, bool aligned){
-	if (aligned){
+static void *heap_allocate(uint64 psize, bool align){
+	if (align){
 		placement_addr32 = PAGE_SIZE_ALIGN(placement_addr32);
 	}
 	uint32 tmp = placement_addr32;
@@ -102,19 +102,19 @@ static void setup_pages(uint64 ammount){
 	// Located at 0x00100000 (1MB mark, see config.h)
 	// a.k.a. PML4T (512GB per entry = 256TB total, this is a page cabinet)
 	// Holds 512 entries, only 1st is active - enough to map 512GB
-	pm_t *pml4 = (pm_t*)pheap_alloc_block(sizeof(pm_t) * 512, true); 
+	pm_t *pml4 = (pm_t*)heap_allocate(sizeof(pm_t) * 512, true); 
 	// Located at PML4 + (8 * 512)
 	// a.k.a. PDPT (page directory pointer table, 1GB per entry, let's call this a page drawer)
 	// Holds 512 entries, each entry maps up to 1GB, table = 512GB
-	pm_t *pml3 = (pm_t*)pheap_alloc_block(sizeof(pm_t) * 512 * (uint32)drawer_count, true);
+	pm_t *pml3 = (pm_t*)heap_allocate(sizeof(pm_t) * 512 * (uint32)drawer_count, true);
 	// Located at PML3 + (8 * 512 * drawer_count)
 	// a.k.a. PD (page directory, 2MB per entry)
 	// Holds 512 entries * directory_count, each entry maps up to 2MB, table = 1GB
-	pm_t *pml2 = (pm_t*)pheap_alloc_block(sizeof(pm_t) * 512 * (uint32)directory_count, true);
+	pm_t *pml2 = (pm_t*)heap_allocate(sizeof(pm_t) * 512 * (uint32)directory_count, true);
 	// Located at PML2 + (8 * 512 * directory_count)
 	// a.k.a. PT (page table, 4KB per entry)
 	// Holds 512 entries * table_count, each entry maps 4KB, table = 2MB
-	pm_t *pml1 = (pm_t*)pheap_alloc_block(sizeof(pm_t) * 512 * (uint32)table_count, true);
+	pm_t *pml1 = (pm_t*)heap_allocate(sizeof(pm_t) * 512 * (uint32)table_count, true);
 	
 	// Clear memory region where the page tables will reside
 	mem_clear((uint8 *)pml4, sizeof(pm_t) * 512);

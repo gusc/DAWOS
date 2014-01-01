@@ -21,16 +21,16 @@ Memory map (Physical)
            0x00700 -            0x007FF = MBR bootstrap after relocation
            0x00800 -            0x009FF = E820 Memory map
            0x00900 -            0x07BFF = Bootloader stack
-           0x07C00 -            0x6CFFF = Bootloader code
-		   0x6D000 -            0x7FFFF = PML tables to map first 32MB of RAM to do a Long Mode jump
-           ...D000 -            ...DFFF = PML4 table
-           ...E000 -            ...EFFF = PML3 table
-           ...F000 -            ...FFFF = PML2 table
-           ..70000 -            ..7FFFF = 16x PML1 tables
+           0x07C00 -            0x7FFFF = Bootloader code (around 480KB of space)
            0x80000 -            0x9FFFF = Reserved for BIOS
            0xA0000 -            0xB7FFF = VGA video buffer
            0xB8000 -            0xBFFFF = VGA teletype buffer
            0xC0000 -            0xFFFFF = Reserved for BIOS
 
-0x0000000000100000 -           0x200000 = Placement heap area (used in the initial phase of page expansion)
-0x0000000000200000 - ...                = Free to use (used by heap allocator)
+0x0000000000100000 -            ...???  = Placement heap area (used in the initial phase of page expansion)
+		  0x100000 -           0x100FFF = PML tables to map first 2MB of RAM to do a Long Mode jump
+           ...1000 -            ...1FFF = PML4 table
+           ...2000 -            ...2FFF = PML3 table
+           ...3000 -            ...3FFF = PML2 table
+           ...4000 -            ...4FFF = PML1 table
+		   ...5000 -            ...     = Heap allocator managed area (Page frame bitset gets loaded here)
