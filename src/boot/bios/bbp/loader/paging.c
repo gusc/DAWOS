@@ -170,27 +170,6 @@ void page_init(uint64 ammount){
 	// Parse memory map
 	parse_e820(mem_map);
 		
-	// Single page (PML1 entry) holds 4KB of RAM
-	uint64 page_count = INIT_MEM / PAGE_SIZE;
-	if (INIT_MEM % PAGE_SIZE > 0){
-		page_count ++;
-	}
-	// Single table (PML2 entry) holds 2MB of RAM
-	uint64 table_count = page_count / 512;
-	if (page_count % 512 > 0){
-		table_count ++;
-	}
-	// Single directory (PML3 entry, directory table pointer) holds 1GB of RAM
-	uint64 directory_count = table_count / 512;
-	if (table_count % 512 > 0){
-		directory_count ++;
-	}
-	// Single drawer (PML4 entry) holds 512GB of RAM
-	uint64 drawer_count = directory_count / 512;
-	if (directory_count % 512 > 0){
-		drawer_count ++;
-	}
-
 	// Calculate total frame count
 	_page_count = _total_mem / PAGE_SIZE;
 	// Allocate frame bitset at the next page boundary

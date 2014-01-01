@@ -90,24 +90,12 @@ static void setup_pages(uint64 ammount){
 	
 	// Single page (PML1 entry) holds 4KB of RAM
 	uint64 page_count = ammount / PAGE_SIZE;
-	if (ammount % PAGE_SIZE > 0){
-		page_count ++;
-	}
 	// Single table (PML2 entry) holds 2MB of RAM
-	uint64 table_count = page_count / 512;
-	if (page_count % 512 > 0){
-		table_count ++;
-	}
+	uint64 table_count = (page_count + 511) / 512;
 	// Single directory (PML3 entry, directory table pointer) holds 1GB of RAM
-	uint64 directory_count = table_count / 512;
-	if (table_count % 512 > 0){
-		directory_count ++;
-	}
+	uint64 directory_count = (table_count + 511) / 512;
 	// Single drawer (PML4 entry) holds 512GB of RAM
-	uint64 drawer_count = directory_count / 512;
-	if (directory_count % 512 > 0){
-		drawer_count ++;
-	}
+	uint64 drawer_count = (directory_count + 511) / 512;
 	
 	// Position the page table structures in memory
 
