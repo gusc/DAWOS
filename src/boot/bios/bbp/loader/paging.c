@@ -180,7 +180,7 @@ void page_init(uint64 ammount){
 	debug_print(DC_WB, "Frames: %d", _page_count);
 #endif
 
-	// Determine unsuable memory regions
+	// Determine unusable memory regions
 	uint64 i;
 	uint64 paddr_from;
 	uint64 paddr_to;
@@ -199,6 +199,37 @@ void page_init(uint64 ammount){
 	_page_offset = (uint64)_page_frames;
 	_page_offset += _page_count / 8;
 	_page_offset = PAGE_SIZE_ALIGN(_page_offset);
+
+	// Register page fault handler
+	interrupt_reg_handler(14, page_fault);
+}
+uint64 page_fault(int_stack_t *stack){
+	uint64 cr2 = 0;
+	asm volatile ("mov %%cr2, %0" : "=a"(cr2) :);
+#if DEBUG == 1
+	// From JamesM tutorials
+	int present   = !(stack->err_code & 0x1); // Page not present
+	int rw = stack->err_code & 0x2;           // Write operation?
+	int us = stack->err_code & 0x4;           // Processor was in user-mode?
+	int reserved = stack->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+	int id = stack->err_code & 0x10;          // Caused by an instruction fetch?
+
+	debug_print(DC_WRD, "Page fault");
+	if (present) {debug_print(DC_WRD, "present ");}
+	if (rw) {debug_print(DC_WRD, "read-only ");}
+	if (us) {debug_print(DC_WRD, "user-mode ");}
+	if (reserved) {debug_print(DC_WRD, "reserved ");}
+	debug_print(DC_WRD, "Error: %x", stack->err_code);
+	debug_print(DC_WRD, "Addr: @%x", cr2);
+#endif
+
+	// Map this page if it's not mapped yet, otherwise hang
+	if (!page_resolve(cr2)){
+		page_map(cr2);
+	} else {
+		return 1;
+	}
+	return 0;
 }
 uint64 page_total_mem(){
 	return _total_mem;

@@ -115,6 +115,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * @return idx - list index
 */
 #define HEAP_SIZE_IDX(s) (s <= HEAP_LIST_MAX ? (HEAP_ALIGN(s) / HEAP_LIST_SPARSE) : -1);
+/**
+* Test if the payload is aligned to page boundary
+* @param p - pointer to the payload
+* @return true if the payload is aligned
+*/
+#define HEAP_IS_PAGE_ALIGNED(p) (!(((uint64)p) & PAGE_IMASK))
+
 
 /**
 * Create a free block and write it's header information
@@ -283,6 +290,80 @@ static void heap_remove_free(heap_t *heap, free_block_t *free_block){
 		}
 	}
 }
+
+static free_block_t *heap_find_free_list(heap_t *heap, uint64 psize, bool align){
+	int8 list_idx = HEAP_SIZE_IDX(psize);
+	if (list_idx >= 0){
+		uint64 list_size = HEAP_LIST_MIN + (HEAP_LIST_SPARSE * list_idx);
+		while (list_idx < HEAP_LIST_COUNT){
+			if (heap->free_list[list_idx] != 0){
+				free_block_t *free_block = heap->free_list[list_idx];
+				if (!align || HEAP_IS_PAGE_ALIGNED(HEAP_GET_PAYLOAD(free_block))){
+					// No alignament required or this block is just perfect
+					free_block = heap->free_list[list_idx];
+					return free_block;
+				} else {
+					// Try to find one that's well aligned in the same list
+					uint64 payload_loc = 0;
+					uint64 payload_off = 0;
+					while (free_block->next_block != 0){
+						payload_loc = (uint64)HEAP_GET_PAYLOAD(free_block);							
+						if (HEAP_IS_PAGE_ALIGNED(payload_loc)){
+							// This one is perfect
+							return free_block;
+						} else {
+							// We have to test if we can try to align it
+							payload_off = PAGE_SIZE - ((payload_loc + sizeof(heap_header_t)) % PAGE_SIZE);
+							if (list_size >= psize + payload_off){
+								return free_block;
+							}
+						}
+						// Move to the next one in the same list
+						free_block = free_block->next_block;
+					}
+				}
+			}
+			// Move to the next list
+			list_size += HEAP_LIST_SPARSE;
+			list_idx ++;
+		}
+	}
+	return 0;
+}
+static free_block_t *heap_find_free_tree(heap_t *heap, uint64 psize, bool align){
+	free_block_t *free_block = 0;
+	// Get used size
+	uint64 usize = psize + HEAP_OVERHEAD;
+	uint64 tree_usize = HEAP_GET_USIZE(heap->free_tree);
+	if (usize == tree_usize){
+		// Bingo!
+		free_block = heap->free_tree;
+	} else if (usize > tree_usize){
+		// Go right
+		free_block_t *free_right = heap->free_tree;
+		while (free_right->next_block != 0 && usize > HEAP_GET_USIZE(free_right->next_block)){
+			free_right = free_right->next_block;
+		}
+		if (usize <= HEAP_GET_USIZE(free_right)){
+			free_block = free_right;
+		}
+	} else {
+		// Go left
+		free_block_t *free_left = heap->free_tree;
+		while (free_left->prev_block != 0 && usize < HEAP_GET_USIZE(free_left->prev_block)){
+			free_left = free_left->prev_block;
+		}
+		if (usize <= HEAP_GET_USIZE(free_left)){
+			free_block = free_left;
+		} else if (free_left->next_block != 0){
+			free_left = free_left->next_block;
+			if (usize <= HEAP_GET_USIZE(free_left)){
+				free_block = free_left;
+			}
+		}
+	}
+	return free_block;
+}
 /**
 * Find a free block from the segregated list or a binary search tree
 * @param heap - pointer to the beginning of the heap
@@ -291,64 +372,11 @@ static void heap_remove_free(heap_t *heap, free_block_t *free_block){
 * @return a free block or 0
 */
 static free_block_t *heap_find_free(heap_t *heap, uint64 psize, bool align){
-	free_block_t *free_block = 0;
 	psize = HEAP_ALIGN(psize);
-	int8 list_idx = HEAP_SIZE_IDX(psize);
-	if (list_idx >= 0){
-		uint64 list_size = HEAP_LIST_MIN + (HEAP_LIST_SPARSE * list_idx);
-		while (list_idx < HEAP_LIST_COUNT){
-			if (psize <= list_size && heap->free_list[list_idx] != 0){
-				if (!align || !(((uint64)HEAP_GET_PAYLOAD(heap->free_list[list_idx])) & PAGE_IMASK)){
-					// Pop the block from the list and return
-					free_block = heap->free_list[list_idx];
-					return free_block;
-				} else {
-					// Try to find one that's well aligned
-					free_block_t *free_test = heap->free_list[list_idx];
-					while (free_test->next_block != 0){
-						if (!(((uint64)HEAP_GET_PAYLOAD(free_test)) & PAGE_IMASK)){
-							free_block = free_test;
-							return free_block;
-						}
-						free_test = free_test->next_block;
-					}
-				}
-			}
-			list_size += HEAP_LIST_SPARSE;
-			list_idx ++;
-		}
-	}
+	
+	free_block_t *free_block = heap_find_free_list(heap, psize, align);
 	if (free_block == 0){
-		// Get used size
-		uint64 usize = psize + HEAP_OVERHEAD;
-		uint64 tree_usize = HEAP_GET_USIZE(heap->free_tree);
-		if (usize == tree_usize){
-			// Bingo!
-			free_block = heap->free_tree;
-		} else if (usize > tree_usize){
-			// Go right
-			free_block_t *free_right = heap->free_tree;
-			while (free_right->next_block != 0 && usize > HEAP_GET_USIZE(free_right->next_block)){
-				free_right = free_right->next_block;
-			}
-			if (usize <= HEAP_GET_USIZE(free_right)){
-				free_block = free_right;
-			}
-		} else {
-			// Go left
-			free_block_t *free_left = heap->free_tree;
-			while (free_left->prev_block != 0 && usize < HEAP_GET_USIZE(free_left->prev_block)){
-				free_left = free_left->prev_block;
-			}
-			if (usize <= HEAP_GET_USIZE(free_left)){
-				free_block = free_left;
-			} else if (free_left->next_block != 0){
-				free_left = free_left->next_block;
-				if (usize <= HEAP_GET_USIZE(free_left)){
-					free_block = free_left;
-				}
-			}
-		}
+		free_block = heap_find_free_tree(heap, psize, align);	
 	}
 	return free_block;
 }
@@ -433,9 +461,19 @@ void *heap_alloc(heap_t * heap, uint64 psize, bool align){
 	}
 	return 0;
 }
+
 void *heap_realloc(heap_t * heap, void *ptr, uint64 psize, bool align){
-	// TODO: implement
-	return 0;
+	uint64 psize_now = heap_alloc_size(ptr);
+	if (psize_now > psize){
+		// For now, but we should check if it can be splitted and some parts freed
+		return ptr;
+	} else {
+		// This is easy :)
+		void *ptr_new = heap_alloc(heap, psize, align);
+		mem_copy((uint8 *)ptr_new, psize_now, (uint8 *)ptr);
+		heap_free(heap, ptr);
+		return ptr_new;
+	}
 }
 
 void heap_free(heap_t * heap, void *ptr){

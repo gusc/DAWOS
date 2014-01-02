@@ -62,10 +62,10 @@ void main64(){
 
 	// Initialize memory manager
 	mem_init();
-	// Initialize paging (well, actually re-initialize)
-	page_init();
 	// Initialize interrupts
 	interrupt_init();
+	// Initialize paging (well, actually re-initialize)
+	page_init();
 	// Initialize kernel heap allocator
 	mem_init_heap();
 	
@@ -86,7 +86,7 @@ void main64(){
 	mem_free((void *)addr2);
 	mem_list();
 
-	uint64 addr = (uint64)mem_alloc(64);
+	uint64 addr = (uint64)mem_alloc_align(64);
 	debug_print(DC_WB, "Allocate 64 bytes @%x", addr);
 	mem_list();
 

@@ -78,6 +78,73 @@ idt_entry_t idt[256];
 * Interrupt Descriptor Table pointer
 */
 idt_ptr_t idt_ptr;
+/**
+* Interrupt handlers
+*/
+interrupt_handler_t handlers[256];
+/**
+* Interrupt handlers
+*/
+irq_handler_t irq_handlers[16];
+
+/**
+* Set IDT pointer
+* @see interrupts.asm
+* @param idt_ptr - an address of IDT pointer structure in memory
+* @return void
+*/
+extern void idt_set(idt_ptr_t *idt_ptr);
+
+// Defined in interrupts.asm (with macros!)
+extern void isr0();
+extern void isr1();
+extern void isr2();
+extern void isr3();
+extern void isr4();
+extern void isr5();
+extern void isr6();
+extern void isr7();
+extern void isr8();
+extern void isr9();
+extern void isr10();
+extern void isr11();
+extern void isr12();
+extern void isr13();
+extern void isr14();
+extern void isr15();
+extern void isr16();
+extern void isr17();
+extern void isr18();
+extern void isr19();
+extern void isr20();
+extern void isr21();
+extern void isr22();
+extern void isr23();
+extern void isr24();
+extern void isr25();
+extern void isr26();
+extern void isr27();
+extern void isr28();
+extern void isr29();
+extern void isr30();
+extern void isr31();
+// Defined in interrupts.asm (with macros!)
+extern void irq0();
+extern void irq1();
+extern void irq2();
+extern void irq3();
+extern void irq4();
+extern void irq5();
+extern void irq6();
+extern void irq7();
+extern void irq8();
+extern void irq9();
+extern void irq10();
+extern void irq11();
+extern void irq12();
+extern void irq13();
+extern void irq14();
+extern void irq15();
 
 static void idt_set_entry(uint8 num, uint64 addr, uint16 flags){
 	idt[num].offset_lo = (uint16)(addr & 0xFFFF);
@@ -90,6 +157,8 @@ static void idt_set_entry(uint8 num, uint64 addr, uint16 flags){
 
 void interrupt_init(){
 	mem_fill((uint8 *)&idt, sizeof(idt_entry_t) * 256, 0);
+	mem_fill((uint8 *)&handlers, sizeof(interrupt_handler_t) * 256, 0);
+	mem_fill((uint8 *)&irq_handlers, sizeof(irq_handler_t) * 16, 0);
 
 	// Remap the IRQ table.
 	outb(0x20, 0x11); // Initialize master PIC
@@ -157,17 +226,39 @@ void interrupt_init(){
 	idt_ptr.base = (uint64)&idt;
 	idt_set(&idt_ptr);
 }
-
-void isr_handler(int_stack_t stack){
+void interrupt_reg_handler(uint64 int_no, interrupt_handler_t handler){
+	if (int_no < 256){
+		handlers[int_no] = handler;
+	}
+}
+void interrupt_reg_irq_handler(uint64 irq_no, irq_handler_t handler){
+	if (irq_no < 16){
+		irq_handlers[irq_no] = handler;
+	}
+}
+void isr_wrapper(int_stack_t stack){
+	if (handlers[stack.int_no] != 0){
+		interrupt_handler_t handler = handlers[stack.int_no];
+		if (handler(&stack)){
 #if DEBUG == 1
+			debug_print(DC_WRD, "Unhandled interrupt");
+#endif
+			HANG();
+		} else {
+			return;
+		}
+	}
+
+#if DEBUG == 1
+	debug_print(DC_WB, "No handler found");
 	if (stack.int_no < 19){
-		debug_print(DC_WB, ints[stack.int_no]);
+		debug_print(DC_WB, "INT %d, %s", stack.int_no, ints[stack.int_no]);
 	} else {
-		debug_print(DC_WB, "Interrupt: %x", stack.int_no);
+		debug_print(DC_WB, "INT %d", stack.int_no);
 	}
 #endif
-	// Process some exceptions here
-	uint64 cr2 = 0;
+
+	// Process some exceptions here	
 	switch (stack.int_no){
 		case 0: // Division by zero
 			//stack.rip++; // it's ok to divide by zero - move to next instruction :P
@@ -178,25 +269,23 @@ void isr_handler(int_stack_t stack){
 #endif
 			HANG();
 			break;
-		case 14: // Page fault			
-			asm volatile ("mov %%cr2, %0" : "=a"(cr2) :);			
-			// Map this page if it's not mapped yet, otherwise hang
-			if (!page_resolve(cr2)){
-				page_map(cr2);
-			} else {
-#if DEBUG == 1
-			debug_print(DC_WRD, "Error: %x", stack.err_code);
-			debug_print(DC_WRD, "Addr: @%x", cr2);
-#endif
-				HANG();
-			}
-			// Do something!
-			break;
 	}
 }
 
-void irq_handler(int_stack_t stack){
+void irq_wrapper(int_stack_t stack){
 #if DEBUG == 1
 	debug_print(DC_WB, "IRQ %d", stack.err_code);
+#endif
+	if (handlers[stack.err_code] != 0){
+		irq_handler_t handler = handlers[stack.int_no];
+		if (handler(&stack)){
+#if DEBUG == 1
+			debug_print(DC_WRD, "Unhandled IRQ");
+#endif
+		}
+	}
+
+#if DEBUG == 1
+	debug_print(DC_WB, "No handler found");
 #endif
 }

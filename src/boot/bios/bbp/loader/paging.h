@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __paging_h
 
 #include "common.h"
+#include "interrupts.h"
 
 typedef union {
 	struct {
@@ -100,6 +101,12 @@ typedef union {
 * Initialize paging
 */
 void page_init();
+/**
+* Page fault handler
+* @param stack - pointer to interrupt stack
+* @return 1 if interrupt could not be handled
+*/
+uint64 page_fault(int_stack_t *stack);
 /**
 * Get total installed RAM
 * @return RAM size in bytes
