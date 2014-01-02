@@ -136,6 +136,15 @@ uint64 page_alloc(uint64 size);
 * @param vaddr - virtual address to free
 */
 void page_free(uint64 vaddr);
-
+/**
+* Get the current physical address of PML4
+* @return physical address of PML4
+*/
+uint64 page_get_pml4();
+/**
+* Set new physical address of PML4
+* @param paddr - new physical address of PML4
+*/
+void page_set_pml4(uint64 paddr);
 
 #endif /* __paging_h */

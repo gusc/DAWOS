@@ -349,3 +349,14 @@ uint64 page_alloc(uint64 size){
 void page_free(uint64 vaddr){
 	// TODO: implement
 }
+
+uint64 page_get_pml4(){
+	uint64 paddr;
+	asm volatile("mov %%cr3, %0" : "=a"(paddr) : );
+	return PAGE_ALIGN(paddr);
+}
+
+void page_set_pml4(uint64 paddr){
+	paddr = PAGE_ALIGN(paddr);
+	asm volatile("mov %0, %%cr3" : : "r"(paddr));
+}

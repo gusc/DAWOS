@@ -93,6 +93,11 @@ void main64(){
 	debug_print(DC_WB, "Deallocate @%x", addr);
 	mem_free((void *)addr);
 	mem_list();
+
+	uint64 pml4 = page_get_pml4();
+	debug_print(DC_WB, "PML4 @%x", pml4);
+	page_set_pml4(pml4);
+	debug_print(DC_WB, "PML4 reset");
 #endif
 
 	// Initialize PCI
