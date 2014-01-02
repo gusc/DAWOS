@@ -85,10 +85,49 @@ static uint64 _page_offset = 0;
 static uint64 *_page_frames;
 static uint64 _page_count = 0;
 
-// Get bitset index
-#define BIT_INDEX(b) (b / 64)
-// Get bit offset in bitset
-#define BIT_OFFSET(b) (b % 64)
+/**
+* Placeholder for the next virtual address
+*/
+static uint64 page_placeholder = INIT_MEM;
+
+// Virtual address parts masks
+//#define PAGE_PML4_IDX_MASK 0xFF8000000000
+//#define PAGE_PML3_IDX_MASK 0x7FC0000000
+//#define PAGE_PML2_IDX_MASK 0x3FE00000
+#define PAGE_PML_IDX_MASK 0x1FF000
+#if PAGE_LEVELS == 2
+	#define PAGE_OFFSET_MASK   0x3FFFFF
+#elif PAGE_LEVELS == 3
+	#define PAGE_OFFSET_MASK   0x1FFFFF
+#else
+	#define PAGE_OFFSET_MASK   0xFFF
+#endif
+/**
+* Get table entry index from virtual address
+* @param va - virtual address
+* @param lvl - PML level
+* @return idx - index of the entry
+*/
+#define PAGE_PML_IDX(va, lvl) ((va & PAGE_PML_IDX_MASK) << ((lvl - 1) * 9))
+/**
+* Get bitset index
+* @param p - page number
+* @return index
+*/
+#define PAGE_FRAME_INDEX(p) (p / 64)
+/**
+* Get bit offset in bitset
+* @param p - page number
+* @return offset
+*/
+#define PAGE_FRAME_BIT(p) (p % 64)
+/**
+* Get the physical address from page table at index
+* @param pt - page table
+* @param idx - index of the entry
+* @return paddr - physical address
+*/
+#define PAGE_ADDRESS(pt, idx) (((pm_t *)pt)[idx].raw & PAGE_MASK)
 
 /**
 * Mark frame allocated
@@ -96,8 +135,8 @@ static uint64 _page_count = 0;
 */
 static void page_set_frame(uint64 paddr){
     uint64 page = paddr / 4069;
-    uint64 idx = BIT_INDEX(page);
-    uint64 offset = BIT_OFFSET(page);
+    uint64 idx = PAGE_FRAME_INDEX(page);
+    uint64 offset = PAGE_FRAME_BIT(page);
 	_page_frames[idx] |= (0x1 << offset);
 }
 /**
@@ -106,8 +145,8 @@ static void page_set_frame(uint64 paddr){
 */
 static void page_clear_frame(uint64 paddr){
     uint64 page = paddr / 4069;
-    uint64 idx = BIT_INDEX(page);
-    uint64 offset = BIT_OFFSET(page);
+    uint64 idx = PAGE_FRAME_INDEX(page);
+    uint64 offset = PAGE_FRAME_BIT(page);
 	_page_frames[idx] &= ~(0x1 << offset);
 }
 /**
@@ -117,8 +156,8 @@ static void page_clear_frame(uint64 paddr){
 */
 static bool page_check_frame(uint64 paddr){
     uint64 page = paddr / 4069;
-    uint64 idx = BIT_INDEX(page);
-    uint64 offset = BIT_OFFSET(page);
+    uint64 idx = PAGE_FRAME_INDEX(page);
+    uint64 offset = PAGE_FRAME_BIT(page);
     return (_page_frames[idx] & (0x1 << offset));
 }
 
@@ -149,7 +188,7 @@ static void parse_e820(e820map_t *mem_map){
 	// Get total RAM
 	for (i = 0; i < mem_map->size; i ++){
 #if DEBUG == 1
-		//debug_print(DC_WB, "%x -> %x (%d)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, mem_map->entries[i].type);
+		debug_print(DC_WB, "%x -> %x (%d)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, mem_map->entries[i].type);
 #endif
 		if (mem_map->entries[i].type != kMemReserved){
 			if (mem_map->entries[i].base + mem_map->entries[i].length > _total_mem){
@@ -237,167 +276,76 @@ uint64 page_total_mem(){
 uint64 page_available_mem(){
 	return _available_mem;
 }
-uint64 page_normalize_vaddr(uint64 vaddr){
-	vaddr_t va;
-	va.raw = vaddr;
-	if ((va.s.drawer_idx & 0x100) != 0){
-		va.s.canonical = 0xFFFF;
-	} else {
-		va.s.canonical = 0x0000;
-	}
-	return va.raw;
-}
-uint64 page_map(uint64 paddr){
+uint64 page_id_map(uint64 paddr, bool mmio){
 	// Do the identity map
-	vaddr_t va;
-	pm_t *pml3;
-	pm_t *pml2;
-	pm_t *pml1;
-	va.raw = page_normalize_vaddr(paddr);
-	if (!_pml4[va.s.drawer_idx].s.present){
-		page_set_frame(_page_offset);
-		pml3 = (pm_t *)_page_offset;
-		mem_fill((uint8 *)pml3, sizeof(pm_t) * 512, 0);
-		_pml4[va.s.drawer_idx].raw = (uint64)pml3;
-		_pml4[va.s.drawer_idx].s.present = 1;
-		_pml4[va.s.drawer_idx].s.writable = 1;
-		_page_offset += (sizeof(pm_t) * 512);
-	}
-	pml3 = (pm_t *)(_pml4[va.s.drawer_idx].raw & PAGE_MASK);
-	if (!pml3[va.s.directory_idx].s.present){
-		page_set_frame(_page_offset);
-		pml2 = (pm_t *)_page_offset;
-		mem_fill((uint8 *)pml2, sizeof(pm_t) * 512, 0);
-		pml3[va.s.directory_idx].raw = (uint64)pml2;
-		pml3[va.s.directory_idx].s.present = 1;
-		pml3[va.s.directory_idx].s.writable = 1;
-		_page_offset += (sizeof(pm_t) * 512);
-	}
-	pml2 = (pm_t *)(pml3[va.s.directory_idx].raw & PAGE_MASK);
-	if (!pml2[va.s.table_idx].s.present){
-		page_set_frame(_page_offset);
-		pml1 = (pm_t *)_page_offset;
-		mem_fill((uint8 *)pml1, sizeof(pm_t) * 512, 0);
-		pml2[va.s.table_idx].raw = (uint64)pml1;
-		pml2[va.s.table_idx].s.present = 1;
-		pml2[va.s.table_idx].s.writable = 1;
-		_page_offset += (sizeof(pm_t) * 512);
-	}
-	pml1 = (pm_t *)(pml2[va.s.table_idx].raw & PAGE_MASK);
-	if (!pml1[va.s.page_idx].s.present){
-		pml1[va.s.page_idx].raw = (paddr & PAGE_MASK);
-		pml1[va.s.page_idx].s.present = 1;
-		pml1[va.s.page_idx].s.writable = 1;
-	}	
-	return va.raw;
-}
-uint64 page_map_mmio(uint64 paddr){
-	// Do the identity map
-	vaddr_t va;
-	pm_t *pml3;
-	pm_t *pml2;
-	pm_t *pml1;
-	va.raw = page_normalize_vaddr(paddr);
-	if (!_pml4[va.s.drawer_idx].s.present){
-		page_set_frame(_page_offset);
-		pml3 = (pm_t *)_page_offset;
-		mem_fill((uint8 *)pml3, sizeof(pm_t) * 512, 0);
-		_pml4[va.s.drawer_idx].raw = (uint64)pml3;
-		_pml4[va.s.drawer_idx].s.present = 1;
-		_pml4[va.s.drawer_idx].s.writable = 1;
-		_pml4[va.s.drawer_idx].s.write_through = 1;
-		_pml4[va.s.drawer_idx].s.cache_disable = 1;
-		_page_offset += (sizeof(pm_t) * 512);
-	}
-	pml3 = (pm_t *)(_pml4[va.s.drawer_idx].raw & PAGE_MASK);
-	if (!pml3[va.s.directory_idx].s.present){
-		page_set_frame(_page_offset);
-		pml2 = (pm_t *)_page_offset;
-		mem_fill((uint8 *)pml2, sizeof(pm_t) * 512, 0);
-		pml3[va.s.directory_idx].raw = (uint64)pml2;
-		pml3[va.s.directory_idx].s.present = 1;
-		pml3[va.s.directory_idx].s.writable = 1;
-		pml3[va.s.directory_idx].s.write_through = 1;
-		pml3[va.s.directory_idx].s.cache_disable = 1;
-		_page_offset += (sizeof(pm_t) * 512);
-	}
-	pml2 = (pm_t *)(pml3[va.s.directory_idx].raw & PAGE_MASK);
-	if (!pml2[va.s.table_idx].s.present){
-		page_set_frame(_page_offset);
-		pml1 = (pm_t *)_page_offset;
-		mem_fill((uint8 *)pml1, sizeof(pm_t) * 512, 0);
-		pml2[va.s.table_idx].raw = (uint64)pml1;
-		pml2[va.s.table_idx].s.present = 1;
-		pml2[va.s.table_idx].s.writable = 1;
-		pml2[va.s.table_idx].s.write_through = 1;
-		pml2[va.s.table_idx].s.cache_disable = 1;
-		_page_offset += (sizeof(pm_t) * 512);
-	}
-	pml1 = (pm_t *)(pml2[va.s.table_idx].raw & PAGE_MASK);
-	if (!pml1[va.s.page_idx].s.present){
-		pml1[va.s.page_idx].raw = (paddr & PAGE_MASK);
-		pml1[va.s.page_idx].s.present = 1;
-		pml1[va.s.page_idx].s.writable = 1;
-		pml1[va.s.page_idx].s.write_through = 1;
-		pml1[va.s.page_idx].s.cache_disable = 1;
-	}	
-	return va.raw;
-}
-uint64 page_resolve(uint64 vaddr){
-	vaddr_t va;
-	uint64 paddr = 0;
-	pm_t *table;
-	va.raw = vaddr;
-	if (_pml4[va.s.drawer_idx].s.present){
-		table = (pm_t *)(_pml4[va.s.drawer_idx].raw & PAGE_MASK);
-		if (table[va.s.directory_idx].s.present){
-			table = (pm_t *)(table[va.s.directory_idx].raw & PAGE_MASK);
-			if (table[va.s.table_idx].s.present){
-				table = (pm_t *)(table[va.s.table_idx].raw & PAGE_MASK);
-				if (table[va.s.page_idx].s.present){
-					paddr = va.s.offset; // set offset
-					paddr |= (table[va.s.page_idx].raw & PAGE_MASK); // merge page aligned address
-				}
+	pm_t *table = _pml4;
+	pm_t *ct;
+	uint64 vaddr = PAGE_CANONICAL(paddr);
+	uint8 i = 4;
+	uint64 idx = PAGE_PML_IDX(vaddr, i);
+	for (i = 3; i >= 1; i --){
+		if (!table[idx].s.present){
+			// Next level table does not exist - create one
+			ct = (pm_t *)mem_alloc_align(sizeof(pm_t) * 512);
+			mem_fill((uint8 *)ct, sizeof(pm_t) * 512, 0);
+
+			table[idx].raw = (uint64)ct;
+			table[idx].s.present = 1;
+			table[idx].s.writable = 1;
+			if (mmio){
+				table[idx].s.write_through = 1;
+				table[idx].s.cache_disable = 1;
 			}
+			// Continiue with the newly created table
+			table = ct;
+		} else {
+			// Find next level table address
+			table = (pm_t *)PAGE_ADDRESS(table, idx);
+		}
+		// Find next level index
+		idx = PAGE_PML_IDX(vaddr, i);
+	}
+	// Last level table
+	table = (pm_t *)PAGE_ADDRESS(table, idx);
+	if (!table[idx].s.present){
+		table[idx].s.present = 1;
+		table[idx].s.writable = 1;
+		if (mmio){
+			table[idx].s.write_through = 1;
+			table[idx].s.cache_disable = 1;
 		}
 	}
-	return paddr;
+	// Store physical address
+	table[idx].raw = (paddr & PAGE_MASK);
+	return vaddr;
+}
+uint64 page_map(uint64 paddr){
+	return page_id_map(paddr, false);
+}
+uint64 page_map_mmio(uint64 paddr){
+	return page_id_map(paddr, true);
+}
+uint64 page_resolve(uint64 vaddr){
+	pm_t *table = _pml4;
+	uint8 i = 4;
+	uint64 idx = PAGE_PML_IDX(vaddr, i);
+	for (i = 3; i >= 1; i --){
+		if (table[idx].s.present){
+			// Next level table exists - load it's address
+			table = (pm_t *)PAGE_ADDRESS(table, idx);
+			// Get next level index from this table
+			idx = PAGE_PML_IDX(vaddr, i);
+		} else {
+			return 0;
+		}
+	}
+	return PAGE_ADDRESS(table, idx) + (vaddr & PAGE_OFFSET_MASK);
 }
 
-pm_t page_get_pml_entry(uint64 vaddr, uint8 level){
-	vaddr_t va;
-	va.raw = vaddr;
-	pm_t *table = _pml4;
-	if (level >= 3){
-		return table[va.s.drawer_idx];
-	}
-	table = (pm_t *)(table[va.s.drawer_idx].raw & PAGE_MASK);
-	if (level == 2){
-		return table[va.s.directory_idx];
-	}
-	table = (pm_t *)(table[va.s.directory_idx].raw & PAGE_MASK);
-	if (level == 1){
-		return table[va.s.table_idx];
-	}
-	table = (pm_t *)(table[va.s.table_idx].raw & PAGE_MASK);
-	return table[va.s.page_idx];
+uint64 page_alloc(uint64 size){
+	// TODO: implement
+	return 0;
 }
-
-void page_set_pml_entry(uint64 vaddr, uint8 level, pm_t pe){
-	vaddr_t va;
-	va.raw = page_normalize_vaddr(vaddr);
-	pm_t *table = _pml4;
-	if (level >= 3){
-		table[va.s.drawer_idx].raw = pe.raw;
-	}
-	table = (pm_t *)(table[va.s.drawer_idx].raw & PAGE_MASK);
-	if (level == 2){
-		table[va.s.directory_idx].raw = pe.raw;
-	}
-	table = (pm_t *)(table[va.s.directory_idx].raw & PAGE_MASK);
-	if (level == 1){
-		table[va.s.table_idx].raw = pe.raw;
-	}
-	table = (pm_t *)(table[va.s.table_idx].raw & PAGE_MASK);
-	table[va.s.page_idx].raw = pe.raw;
+void page_free(uint64 vaddr){
+	// TODO: implement
 }

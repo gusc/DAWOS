@@ -73,23 +73,6 @@ typedef union {
 // Page masks
 #define PAGE_IMASK         (PAGE_SIZE - 1) // Inverse mask
 #define PAGE_MASK          (~PAGE_IMASK)
-// Virtual address parts masks
-#define PAGE_PML4_IDX_MASK 0xFF8000000000
-#define PAGE_PML3_IDX_MASK 0x7FC0000000
-#define PAGE_PML2_IDX_MASK 0x3FE00000
-#define PAGE_PML1_IDX_MASK 0x1FF000
-#if PAGE_LEVELS == 2
-	#define PAGE_OFFSET_MASK   0x3FFFFF
-#elif PAGE_LEVELS == 3
-	#define PAGE_OFFSET_MASK   0x1FFFFF
-#else
-	#define PAGE_OFFSET_MASK   0xFFF
-#endif
-// Get table entry index from virtual address
-#define PAGE_PML4_IDX(va) ((va & PAGE_PML4_IDX_MASK) >> 39)
-#define PAGE_PML3_IDX(va) ((va & PAGE_PML3_IDX_MASK) >> 30)
-#define PAGE_PML2_IDX(va) ((va & PAGE_PML2_IDX_MASK) >> 21)
-#define PAGE_PML1_IDX(va) ((va & PAGE_PML1_IDX_MASK) >> 12)
 // Align address to page start boundary
 #define PAGE_ALIGN(n) (n & PAGE_MASK)
 // Align size to page end boundary
@@ -142,20 +125,17 @@ uint64 page_map_mmio(uint64 paddr);
 * @return physical address
 */
 uint64 page_resolve(uint64 vaddr);
+/**
+* Allocate a new page
+* @param size - size in bytes to allocate (will be aligned to page size)
+* @return virtual address
+*/
+uint64 page_alloc(uint64 size);
+/**
+* Free the page mapped to virtual address
+* @param vaddr - virtual address to free
+*/
+void page_free(uint64 vaddr);
 
-/**
-* Get the PMLx entry from virtual address
-* @param vaddr - virtual address
-* @param level - zero based level (0-3 for PML4 paging)
-* @return PMLx entry
-*/
-pm_t page_get_pml_entry(uint64 vaddr, uint8 level);
-/**
-* Set the PML4 entry for virtual address
-* @param vaddr - virtual address
-* @param level - zero based level (0-3 for PML4 paging)
-* @param pe - PML4 entry
-*/
-void page_set_pml_entry(uint64 vaddr, uint8 level, pm_t pe);
 
 #endif /* __paging_h */
