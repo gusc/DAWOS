@@ -4,8 +4,20 @@ Memory heap management functions
 ================================
 
 Heap management consists of free lists:
-8 size segregated lists 16 - 2048 byte lists
+31 size segregated lists 16 - 2048 byte lists
 1 binary search tree for large free blocks
+
+Segregated by payload size as 16, 32, 64, 128, 256, 512, 1024, 2048 bytes long 
+0 - 16 bytes actually use 32 bytes = header + footer of block size
+1 - 17 to 32 bytes uses 48 bytes
+2 - 33 to 48 -"- 64 bytes
+3 - 49 to 64 -"- 80 bytes
+4 - 65 to 80 -"- 96 bytes
+5 - 81 to 96 -"- 112 bytes
+6 - 97 to 112 -"- 128 bytes
+7 - 113 to 128 -"- 144 bytes
+etc.
+We should'n use more lists as it would expand past page boundaries
 
 License (BSD-3)
 ===============
@@ -95,19 +107,6 @@ struct free_block_struct {
 } __PACKED;
 /**
 * Heap structure
-
-// Segregated by payload size as 16, 32, 64, 128, 256, 512, 1024, 2048 bytes long 
-// 0 - 16 bytes actually use 32 bytes = header + footer of block size
-// 1 - 17 to 32 bytes uses 48 bytes
-// 2 - 33 to 48 -"- 64 bytes
-// 3 - 49 to 64 -"- 80 bytes
-// 4 - 65 to 80 -"- 96 bytes
-// 5 - 81 to 96 -"- 112 bytes
-// 6 - 97 to 112 -"- 128 bytes
-// 7 - 113 to 128 -"- 144 bytes
-// etc.
-// We should'n use more lists as it would expand past page boundaries
-
 */
 struct heap_struct {
 	uint64 start_addr;							// Start address of the heap
@@ -118,15 +117,6 @@ struct heap_struct {
 } __ALIGN(16);
 typedef struct heap_struct heap_t;
 
-
-/**
-* Initialize heap (take over from 32bit mode)
-*/
-void heap_init();
-/**
-* Initialize kernel heap allocator
-*/
-void heap_init_alloc();
 /**
 * Create a new heap with allocation and deallocation functionalities
 * @param start - start address of the heap
@@ -135,41 +125,28 @@ void heap_init_alloc();
 */
 heap_t * heap_create(uint64 start, uint64 size, uint64 max_size);
 /**
-* Allocate a block of memory on the heap aligned to a page boundary
+* Allocate a block of memory on the heap
+* @param heap - pointer to the beginning of the heap
 * @param psize - size of a block to allocate (payload size)
+* @param align - align the beginning of the block to page (4KB) boundary
 * @return new pointer to the memory block allocated or 0
 */
-void *heap_alloc_align(uint64 psize);
-/**
-* Allocate a block of memory on the heap (unaligned)
-* @param psize - size of a block to allocate (payload size)
-* @return new pointer to the memory block allocated or 0
-*/
-void *heap_alloc(uint64 psize);
-/**
-* Allocate a block of memory on the heap (unaligned) and zero it's data
-* @param psize - size of a block to allocate (payload size)
-* @return new pointer to the memory block allocated or 0
-*/
-void *heap_alloc_clean(uint64 psize);
+void *heap_alloc(heap_t *heap, uint64 psize, bool align);
 /**
 * Re allocate a block of memory on the heap
+* @param heap - pointer to the beginning of the heap
 * @param ptr - memory block allocated previously
 * @param psize - new size of block (payload size)
+* @param align - align the beginning of the block to page (4KB) boundary
 * @return new pointer to the memory block allocated or 0
 */
-void *heap_realloc(void *ptr, uint64 psize);
+void *heap_realloc(heap_t *heap, void *ptr, uint64 psize, bool align);
 /**
 * Free memory block allocated by heap_alloc()
+* @param heap - pointer to the beginning of the heap
 * @param ptr - memory block allocated previously
 */
-void heap_free(void *ptr);
-/**
-* Free memory block allocated by heap_alloc() and zero it's data
-* This might come in handy when dealing with some secure data that you don't want to leave as a garbage
-* @param ptr - memory block allocated previously
-*/
-void heap_free_clean(void *ptr);
+void heap_free(heap_t *heap, void *ptr);
 /**
 * Get the allocated size of the pointer (alignament forces to allocate more memory than requested)
 * knowing the real size might come in handy in utilizing the memory overhead
@@ -181,8 +158,9 @@ uint64 heap_alloc_size(void *ptr);
 #if DEBUG == 1
 /**
 * List heap data for debug
+* @param heap - pointer to the beginning of the heap
 */
-void heap_list();
+void heap_list(heap_t *heap);
 #endif
 
 

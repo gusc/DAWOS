@@ -1,6 +1,6 @@
 /*
 
-Kernel entry point
+Loader entry point
 ==================
 
 This is where the fun part begins
@@ -35,9 +35,77 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef __kmain_h
-#define __kmain_h
+#include "../config.h"
+#include "main64.h"
+#include "lib.h"
+#include "io.h"
+#include "interrupts.h"
+#include "paging.h"
+#include "memory.h"
+#include "pci.h"
+#include "ahci.h"
+#if DEBUG == 1
+	#include "debug_print.h"
+#endif
 
-#include "common.h"
+/**
+* Loader entry point
+*/
+void main64(){
 
-#endif /* __kmain_h */
+#if DEBUG == 1
+	// Clear the screen
+	debug_clear(DC_WB);
+	// Show something on the screen
+	debug_print(DC_WB, "Long mode");
+#endif
+
+	// Initialize memory manager
+	mem_init();
+	// Initialize paging (well, actually re-initialize)
+	page_init();
+	// Initialize interrupts
+	interrupt_init();
+	// Initialize kernel heap allocator
+	mem_init_heap();
+	
+#if DEBUG == 1
+	uint64 addr1 = (uint64)mem_alloc(32);
+	debug_print(DC_WB, "Allocate 32 bytes @%x", addr1);	
+	mem_list();
+
+	uint64 addr2 = (uint64)mem_alloc(32);
+	debug_print(DC_WB, "Allocate 32 bytes @%x", addr2);
+	mem_list();
+
+	debug_print(DC_WB, "Deallocate @%x", addr1);
+	mem_free((void *)addr1);
+	mem_list();
+
+	debug_print(DC_WB, "Deallocate @%x", addr2);
+	mem_free((void *)addr2);
+	mem_list();
+
+	uint64 addr = (uint64)mem_alloc(64);
+	debug_print(DC_WB, "Allocate 64 bytes @%x", addr);
+	mem_list();
+
+	debug_print(DC_WB, "Deallocate @%x", addr);
+	mem_free((void *)addr);
+	mem_list();
+#endif
+
+	// Initialize PCI
+	pci_init();
+#if DEBUG == 1
+	//pci_list();
+#endif
+
+	// Initialize AHCI
+	//if (ahci_init()){
+
+	//}
+	
+	// Infinite loop
+	while(true){}
+}

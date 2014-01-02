@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "../config.h"
 #include "paging.h"
-#include "heap.h"
+#include "memory.h"
 #include "lib.h"
 #if DEBUG == 1
 	#include "debug_print.h"
@@ -172,7 +172,7 @@ void page_init(uint64 ammount){
 	// Calculate total frame count
 	_page_count = _total_mem / PAGE_SIZE;
 	// Allocate frame bitset at the next page boundary
-	_page_frames = (uint64 *)heap_alloc(_page_count / 8);
+	_page_frames = (uint64 *)mem_alloc(_page_count / 8);
 	// Clear bitset
 	mem_fill((uint8 *)_page_frames, _page_count / 8, 0);
 

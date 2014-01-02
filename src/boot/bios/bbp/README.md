@@ -9,7 +9,7 @@ Structure
 Main entry files:
 * boot/boot.asm - main BBP entry code (real mode code)
 * boot/ - Real Mode -> Protected Mode -> Long Mode bootstrap code
-* kernel/ - Kernel code
+* loader/ - Long Mode bootloader code
 
 Build files:
 * bbp.ld - BBP linker script

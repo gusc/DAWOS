@@ -48,7 +48,7 @@
 [global start16]								; Export start16 to linker
 [extern main16]									; Import main16() from C
 [extern main32]									; Import main32() from C
-[extern kmain]									; Import kmain() from C
+[extern main64]									; Import main64() from C
 
 ; Remember in NASM it's:
 ; instruction destination, source
@@ -162,7 +162,7 @@ start64:										; Long Mode entry point
 	mov fs, ax
 	mov gs, ax
 
-	call kmain									; call C function kmain() (see: kernel/kmain.c)
+	call main64									; call C function main64() (see: loader/main64.c)
 	cli											; disable interrupts
 	jmp $										; hang
 

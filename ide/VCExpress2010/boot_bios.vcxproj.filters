@@ -98,9 +98,6 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\io.h">
       <Filter>bbp\loader</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\boot\bios\bbp\loader\kmain.h">
-      <Filter>bbp\loader</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\lib.h">
       <Filter>bbp\loader</Filter>
     </ClInclude>
@@ -116,7 +113,10 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\heap.h">
       <Filter>bbp\loader</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\boot\bios\bbp\loader\pheap.h">
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\main64.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\memory.h">
       <Filter>bbp\loader</Filter>
     </ClInclude>
   </ItemGroup>
@@ -136,9 +136,6 @@
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\interrupts.c">
       <Filter>bbp\loader</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\boot\bios\bbp\loader\kmain.c">
-      <Filter>bbp\loader</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\lib.c">
       <Filter>bbp\loader</Filter>
     </ClCompile>
@@ -151,7 +148,10 @@
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\heap.c">
       <Filter>bbp\loader</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\boot\bios\bbp\loader\pheap.c">
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\main64.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\memory.c">
       <Filter>bbp\loader</Filter>
     </ClCompile>
   </ItemGroup>
