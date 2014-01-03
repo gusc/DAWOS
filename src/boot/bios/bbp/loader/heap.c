@@ -381,6 +381,45 @@ static free_block_t *heap_find_free(heap_t *heap, uint64 psize, bool align){
 	return free_block;
 }
 /**
+* Merge block to the left
+* @param free_block - the block you try to merge
+* @return same block or the left one merged with the one you passed
+*/
+static free_block_t * heap_merge_left(heap_t *heap, free_block_t *free_block){
+	if (((uint64)free_block) > heap->start_addr){
+		heap_footer_t *prev_footer = (heap_footer_t *)(((uint8 *)free_block) - sizeof(heap_footer_t));
+		if (HEAP_CHECK_FOOTER(prev_footer) && !prev_footer->header->block.s.used){
+			// Merge left
+			free_block_t *free_left = (free_block_t *)HEAP_GET_HEADER(prev_footer);
+			// Remove the right block
+			heap_remove_free(heap, free_left);
+			// Create new block
+			heap_create_free(free_left, HEAP_GET_USIZE(free_left) + HEAP_GET_USIZE(free_block) - HEAP_OVERHEAD);
+			// Add block to heap free lists of tree
+			free_block = free_left;
+		}
+	}
+	return free_block;
+}
+/**
+* Merge block to the right
+* @param free_block - the block you try to merge
+*/
+static void heap_merge_right(heap_t *heap, free_block_t *free_block){
+	heap_footer_t *footer = (heap_footer_t *)HEAP_GET_FOOTER(free_block);
+	if (((uint64)footer) + sizeof(heap_footer_t) < heap->end_addr){
+		heap_header_t *next_header = (heap_header_t *)(((uint8 *)footer) + sizeof(heap_footer_t));
+		if (HEAP_CHECK_HEADER(next_header) && !next_header->block.s.used){
+			// Merge left
+			free_block_t *free_right = (free_block_t *)next_header;
+			// Remove the right block
+			heap_remove_free(heap, free_right);
+			// Create new block
+			heap_create_free(free_block, HEAP_GET_USIZE(free_block) + HEAP_GET_USIZE(free_right) - HEAP_OVERHEAD);
+		}
+	}
+}
+/**
 * Extend heap size within a page size aligned size
 * @param heap - pointer to the beginning of the heap
 * @param size - required payload size
@@ -389,21 +428,22 @@ static free_block_t *heap_find_free(heap_t *heap, uint64 psize, bool align){
 static free_block_t * heap_extend(heap_t *heap, uint64 psize){
 	psize = HEAP_ALIGN(psize);
 	uint64 usize = psize + HEAP_OVERHEAD;
-	usize = PAGE_SIZE_ALIGN(usize);
-	
+	uint64 page_size = PAGE_SIZE_ALIGN(usize);
 	free_block_t *free_block = (free_block_t *)(heap->end_addr);
-	uint64 page_size = usize;
-	uint64 page_addr = heap->end_addr;
+	
+	// Allocate pages
 	while (page_size > 0){
-		page_map(page_addr);
+		heap->end_addr = page_alloc() + PAGE_SIZE;
 		page_size -= PAGE_SIZE;
-		page_addr += PAGE_SIZE;
 	}
-	heap->end_addr += usize;
 
+	debug_print(DC_WB, "Heap end @%x", heap->end_addr);
+
+	// Create a new free block
 	heap_create_free(free_block, usize - HEAP_OVERHEAD);
-	heap_add_free(heap, free_block);
-
+	// Try to merge with the last one
+	free_block = heap_merge_left(heap, free_block);
+	
 	return free_block;
 }
 
@@ -442,11 +482,11 @@ void *heap_alloc(heap_t * heap, uint64 psize, bool align){
 	if (free_block == 0){
 		// Allocate a new page if all the free space has been used
 		free_block_t *free_block = heap_extend(heap, psize);
-	}
-	if (free_block != 0){
+	} else {
 		// Remove block
 		heap_remove_free(heap, free_block);
-
+	}
+	if (free_block != 0){
 		// Split block if possible
 		free_block_t *free_other = heap_split(free_block, psize);
 		if (free_other != 0){
@@ -479,39 +519,14 @@ void *heap_realloc(heap_t * heap, void *ptr, uint64 psize, bool align){
 void heap_free(heap_t * heap, void *ptr){
 	free_block_t *free_block = (free_block_t *)HEAP_PAYLOAD_HEADER(ptr);
 	if (HEAP_CHECK_HEADER(free_block)){
-		heap_footer_t *prev_footer;
-		heap_header_t *next_header;
-		uint64 *ptr_b = (uint64 *)free_block;
-
 		// Clear used in header
 		free_block->header.block.s.used = 0;
 
-		if (((uint64)free_block) > heap->start_addr){
-			prev_footer = (heap_footer_t *)(((uint8 *)free_block) - sizeof(heap_footer_t));
-			if (HEAP_CHECK_FOOTER(prev_footer) && !prev_footer->header->block.s.used){
-				// Merge left
-				free_block_t *free_left = (free_block_t *)HEAP_GET_HEADER(prev_footer);
-				// Remove the right block
-				heap_remove_free(heap, free_left);
-				// Create new block
-				heap_create_free(free_left, HEAP_GET_USIZE(free_left) + HEAP_GET_USIZE(free_block) - HEAP_OVERHEAD);
-				// Add block to heap free lists of tree
-				free_block = free_left;
-			}
-		}
+		// Try to merge on the left side
+		free_block = heap_merge_left(heap, free_block);
 		
-		heap_footer_t *footer = (heap_footer_t *)HEAP_GET_FOOTER(free_block);
-		if (((uint64)footer) + sizeof(heap_footer_t) < heap->end_addr){
-			next_header = (heap_header_t *)(((uint8 *)footer) + sizeof(heap_footer_t));
-			if (HEAP_CHECK_HEADER(next_header) && !next_header->block.s.used){
-				// Merge left
-				free_block_t *free_right = (free_block_t *)next_header;
-				// Remove the right block
-				heap_remove_free(heap, free_right);
-				// Create new block
-				heap_create_free(free_block, HEAP_GET_USIZE(free_block) + HEAP_GET_USIZE(free_right) - HEAP_OVERHEAD);
-			}
-		}
+		// Try to merge on the right side
+		heap_merge_right(heap, free_block);
 
 		// Add this block back to list or tree
 		heap_add_free(heap, free_block);

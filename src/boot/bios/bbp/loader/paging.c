@@ -75,8 +75,6 @@ typedef struct e820map_struct e820map_t;
 * Page table structures
 */
 static pm_t *_pml4;
-// Import pml4_ptr32 from 32bit mode
-extern uint32 pml4_ptr32;
 
 static uint64 _total_mem = 0;
 static uint64 _available_mem = 0;
@@ -202,7 +200,7 @@ static void parse_e820(e820map_t *mem_map){
 }
 
 void page_init(uint64 ammount){
-	_pml4 = (pm_t *)((uint64)pml4_ptr32);
+	_pml4 = (pm_t *)page_get_pml4();
 	// Read E820 memory map and mark used regions
 	e820map_t *mem_map = (e820map_t *)E820_LOC;
 	// Parse memory map
@@ -278,7 +276,7 @@ uint64 page_available_mem(){
 }
 uint64 page_id_map(uint64 paddr, bool mmio){
 	// Do the identity map
-	pm_t *table = _pml4;
+	pm_t *table = (pm_t *)page_get_pml4();
 	pm_t *ct;
 	uint64 vaddr = PAGE_CANONICAL(paddr);
 	uint8 i = 4;
@@ -326,7 +324,7 @@ uint64 page_map_mmio(uint64 paddr){
 	return page_id_map(paddr, true);
 }
 uint64 page_resolve(uint64 vaddr){
-	pm_t *table = _pml4;
+	pm_t *table = (pm_t *)page_get_pml4();
 	uint8 i = 4;
 	uint64 idx = PAGE_PML_IDX(vaddr, i);
 	for (i = 3; i >= 1; i --){
@@ -342,12 +340,39 @@ uint64 page_resolve(uint64 vaddr){
 	return PAGE_ADDRESS(table, idx) + (vaddr & PAGE_OFFSET_MASK);
 }
 
-uint64 page_alloc(uint64 size){
-	// TODO: implement
-	return 0;
+uint64 page_alloc(){
+	// TODO: create smarter one
+	uint64 vaddr = page_placeholder;
+#if DEBUG == 1
+	debug_print(DC_WB, "Try to allocate: %x", vaddr);
+#endif
+	if (!page_resolve(vaddr)){
+		if (page_map(vaddr)){
+			page_placeholder += PAGE_SIZE;
+			return vaddr;
+		}
+	}
+
+	return 0;	
 }
 void page_free(uint64 vaddr){
-	// TODO: implement
+	pm_t *table = (pm_t *)page_get_pml4();
+	uint8 i = 4;
+	uint64 idx = PAGE_PML_IDX(vaddr, i);
+	for (i = 3; i >= 1; i --){
+		if (table[idx].s.present){
+			// Next level table exists - load it's address
+			table = (pm_t *)PAGE_ADDRESS(table, idx);
+			// Get next level index from this table
+			idx = PAGE_PML_IDX(vaddr, i);
+		} else {
+			return;
+		}
+	}
+	table[idx].s.present = 0;
+	uint64 paddr = table[idx].raw & PAGE_MASK;
+	page_clear_frame(paddr);
+	// TODO: check if some page table is empty and delete it's parent
 }
 
 uint64 page_get_pml4(){
@@ -358,5 +383,6 @@ uint64 page_get_pml4(){
 
 void page_set_pml4(uint64 paddr){
 	paddr = PAGE_ALIGN(paddr);
+	paddr |= 0xB; // Set present, writable, write-through bits
 	asm volatile("mov %0, %%cr3" : : "r"(paddr));
 }

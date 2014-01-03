@@ -70,7 +70,7 @@ void main64(){
 	mem_init_heap();
 	
 #if DEBUG == 1
-	uint64 addr1 = (uint64)mem_alloc(32);
+	/*uint64 addr1 = (uint64)mem_alloc(32);
 	debug_print(DC_WB, "Allocate 32 bytes @%x", addr1);	
 	mem_list();
 
@@ -94,10 +94,21 @@ void main64(){
 	mem_free((void *)addr);
 	mem_list();
 
-	uint64 pml4 = page_get_pml4();
-	debug_print(DC_WB, "PML4 @%x", pml4);
-	page_set_pml4(pml4);
-	debug_print(DC_WB, "PML4 reset");
+	uint64 addrm = (uint64)mem_alloc_align(1048576);
+	debug_print(DC_WB, "Allocate 1MB @%x", addrm);
+	mem_list();
+
+	uint64 addrm2 = (uint64)mem_alloc(1048576);
+	debug_print(DC_WB, "Allocate 1MB @%x", addrm2);
+	mem_list();
+
+	debug_print(DC_WB, "Deallocate @%x", addrm);
+	mem_free((void *)addrm);
+	mem_list();
+
+	debug_print(DC_WB, "Deallocate @%x", addrm2);
+	mem_free((void *)addrm2);
+	mem_list();*/
 #endif
 
 	// Initialize PCI

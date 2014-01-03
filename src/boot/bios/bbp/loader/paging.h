@@ -127,10 +127,9 @@ uint64 page_map_mmio(uint64 paddr);
 uint64 page_resolve(uint64 vaddr);
 /**
 * Allocate a new page
-* @param size - size in bytes to allocate (will be aligned to page size)
 * @return virtual address
 */
-uint64 page_alloc(uint64 size);
+uint64 page_alloc();
 /**
 * Free the page mapped to virtual address
 * @param vaddr - virtual address to free
