@@ -51,6 +51,13 @@ enum eMemType {
 	kMemACPI,			// ACPI NVS memory - unusable
 	kMemBad				// Bad memory - unsuable
 };
+static char *types[] = {
+  "Free",
+  "Reserved",
+  "ACPI Reclaimable",
+  "ACPI NVS",
+  "Bad"
+};
 /**
 * E820 memory map entry structure
 */
@@ -70,6 +77,8 @@ struct e820map_struct {
 	e820entry_t entries[];
 } __PACKED;
 typedef struct e820map_struct e820map_t;
+
+
 
 /**
 * Page table structures
@@ -186,7 +195,11 @@ static void parse_e820(e820map_t *mem_map){
 	// Get total RAM
 	for (i = 0; i < mem_map->size; i ++){
 #if DEBUG == 1
-		debug_print(DC_WB, "%x -> %x (%d)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, mem_map->entries[i].type);
+		if (mem_map->entries[i].type >= 1 && mem_map->entries[i].type <= 5){
+			debug_print(DC_WB, "%x -> %x (%s)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, types[mem_map->entries[i].type - 1]);
+		} else {
+			debug_print(DC_WB, "%x -> %x (%d)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, mem_map->entries[i].type);
+		}
 #endif
 		if (mem_map->entries[i].type != kMemReserved){
 			if (mem_map->entries[i].base + mem_map->entries[i].length > _total_mem){
