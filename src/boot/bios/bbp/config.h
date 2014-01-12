@@ -57,7 +57,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
 // E820 memory map location
-#define E820_LOC 0x0800
+#define E820_LOC 0x0500
 // Default page alignament size
 #define PAGE_SIZE 0x1000 // 4KB
 // Number of paging levels (4 = 4KB pages, 3 = 2MB pages, 2 = 1GB pages)
@@ -74,6 +74,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HEAP_LIST_MIN 16
 // Maximum free block size listed in segregated lists in bytes (larger ones go to a binary search tree)
 #define HEAP_LIST_MAX 512
+// Maximum heap size (50MB for now)
+#define HEAP_MAX_SIZE 0x3200000
 
 #if VIDEOMODE == 1
 	// Teletype video memory location

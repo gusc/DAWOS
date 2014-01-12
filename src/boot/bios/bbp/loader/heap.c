@@ -433,11 +433,9 @@ static free_block_t * heap_extend(heap_t *heap, uint64 psize){
 	
 	// Allocate pages
 	while (page_size > 0){
-		heap->end_addr = page_alloc() + PAGE_SIZE;
+		heap->end_addr += PAGE_SIZE;
 		page_size -= PAGE_SIZE;
 	}
-
-	debug_print(DC_WB, "Heap end @%x", heap->end_addr);
 
 	// Create a new free block
 	heap_create_free(free_block, usize - HEAP_OVERHEAD);

@@ -42,7 +42,7 @@
 ;
 
 ; Definitions:
-%define ORG_LOC		0x7C00						; Initial position in memory (where MBR loads us)
+%define ORG_LOC		0x1000						; Initial position in memory (where MBR loads us)
 
 [section .text]
 [global start16]								; Export start16 to linker
@@ -120,7 +120,6 @@ start32:										; Protected mode entry point
 	mov cr4, eax								; write to CR4
 
 	mov eax, [pml4_ptr32]						; point eax to PML4 pointer location
-	or eax, 0x0000000B							; enable write-through
 	mov cr3, eax								; save PML4 pointer into CR3
 	
 	mov ecx, 0xC0000080							; read from the EFER MSR

@@ -61,8 +61,8 @@ extern uint32 placement_addr32;
 void mem_init(){
 	_placement_addr = (uint64)placement_addr32;
 }
-void mem_init_heap(){
-	_heap = heap_create(_placement_addr, INIT_MEM - _placement_addr - 1, 0);
+void mem_init_heap(uint64 max_size){
+	_heap = heap_create(_placement_addr, PAGE_SIZE, max_size);
 	_placement_addr = INIT_MEM;
 }
 void *mem_alloc(uint64 size){

@@ -49,7 +49,7 @@ void mem_init();
 /**
 * Initialize heap allocator
 */
-void mem_init_heap();
+void mem_init_heap(uint64 max_size);
 /**
 * Allocate a block of memory
 * @param size - required memory block size

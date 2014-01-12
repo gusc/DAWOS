@@ -67,10 +67,10 @@ void main64(){
 	// Initialize paging (well, actually re-initialize)
 	page_init();
 	// Initialize kernel heap allocator
-	mem_init_heap();
+	mem_init_heap(HEAP_MAX_SIZE);
 	
 #if DEBUG == 1
-	/*uint64 addr1 = (uint64)mem_alloc(32);
+	uint64 addr1 = (uint64)mem_alloc(32);
 	debug_print(DC_WB, "Allocate 32 bytes @%x", addr1);	
 	mem_list();
 
@@ -108,7 +108,7 @@ void main64(){
 
 	debug_print(DC_WB, "Deallocate @%x", addrm2);
 	mem_free((void *)addrm2);
-	mem_list();*/
+	mem_list();
 #endif
 
 	// Initialize PCI

@@ -502,7 +502,7 @@ bool ahci_init(){
 				// Get ABAR (AHCI Base Address)
 				abar = (uint64)dev.bar[5];
 				// Map the page
-				page_map_mmio(abar);
+				page_map_mmio(abar, abar);
 				hba = (ahci_hba_t *)abar;
 #if DEBUG == 1
 				debug_print(DC_WB, "SATA controller at %u:%u", addr.s.bus, addr.s.device);

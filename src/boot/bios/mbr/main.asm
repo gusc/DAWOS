@@ -10,28 +10,28 @@
 ; 9. do a check on each partition entry for GUID of BBP
 ; 10. store BBP partition's start LBA
 ; 10. calculate and store BBP partition's lenght
-; 11. relocate rest of the MBR (just the part that loads data from BBP) to 0x0700
+; 11. relocate rest of the MBR (just the part that loads data from BBP) to 0x0500
 ; 12. read BBP from the disk and store in memory starting at 0x7C00
 ; 13. jump to BBP (0x7C00)
 ;
 ; memory map at the start:
-; 0x0600 - 0x7BFF - free
+; 0x0500 - 0x7BFF - free
 ; 0x7C00 - 0x7DFF - MBR loaded by BIOS
 ; 0x7E00 - 0x0007FFFF - free
 ;
 ; memory map before the jump to BBP:
-; 0x0600 - Disk address packet (DAP) location (2x qword)
-; 0x0660 - Local data (disk ID, bbp size, etc.) location (2x dword)
-; 0x0700 - MBR bootstrap after relocation (curently it looks like just 16 bytes)
-; 0x0800 - Read buffer location (512 bytes usually)
-; 0x7C00 - Stack pointer
-; 0x7C00 - ??? - Bootloader code loaded by MBR bootstrap (we need atleas 512KiB or 1024 sectors)
+; 0x0500 - MBR bootstrap after relocation (curently it looks like just the last 16 bytes)
+; 0x0550 - Disk address packet (DAP) location (2x qword)
+; 0x0560 - Local data (disk ID, bbp size, etc.) location (2x dword)
+; 0x0600 - Read buffer location (512 bytes usually)
+; 0x1000 - Stack pointer
+; 0x1000 - 0x80000 - Bootloader code loaded by MBR bootstrap (we have atleast 508KiB or 1016 sectors here)
 
 ; Code location constants
 %define ORG_LOC			0x7C00					; Initial MBR position in memory (where BIOS loads it)
-%define RELOC_LOC		0x0800					; Relocation position (where we will copy neccessary MBR code to chainload bootloader)
-%define	BUFF_LOC		0x0800					; Location of read buffer in memory
-%define BOOT_LOC		0x7C00					; Location of BBP bootcode
+%define RELOC_LOC		0x0500					; Relocation position (where we will copy neccessary MBR code to chainload bootloader)
+%define	BUFF_LOC		0x0600					; Location of read buffer in memory
+%define BOOT_LOC		0x1000					; Location of BBP bootcode
 
 ; Local data structure
 struc tDATA							
@@ -39,7 +39,7 @@ struc tDATA
 	._pad			resb	3					; dummy padding
 	.bbp_size		resd	1					; BBP sector count
 endstruc
-%define DATA_LOC		0x0660					; Location of our global data structure in memory
+%define DATA_LOC		0x0560					; Location of our global data structure in memory
 %define DATA(x)  DATA_LOC + tDATA. %+ x			; Helper macro to clean up the code a bit
 
 ; MBR Partition entry structure
@@ -63,7 +63,7 @@ struc tDAP
 	.lba_start_l	resd	1					; Low dword of start LBA
 	.lba_start_h	resd	1					; High dword of start LBA
 endstruc
-%define DAP_LOC			0x0600					; Location in memory
+%define DAP_LOC			0x0550					; Location in memory
 %define DAP(x)	DAP_LOC + tDAP. %+ x			; Helper macro to clean up the code a bit
 
 ; GPT Header
@@ -233,6 +233,7 @@ bootstrap_start:								; Read bootable partition
 	xor eax, eax								; clear eax
 	xor ebx, ebx								; clear ebx
 	xor ecx, ecx								; clear ecx
+	mov sp, BOOT_LOC							; reset stack pointer to the begining of the new boot loader location
 	mov eax, dword [DATA(bbp_size)]				; copy boot partition sector count
 	cmp eax, 0x0400								; test if not bigger than 1024 sectors (512 KiB)
 	jle	.prep_copy_loop							; continiue if less or equal

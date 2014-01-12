@@ -35,6 +35,7 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\ahci.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\common.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\cpuid.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\cr.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\debug_print.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\heap.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\interrupts.h" />

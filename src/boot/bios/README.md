@@ -16,12 +16,11 @@ Memory map (Physical)
 ---------------------
 
 0x0000000000000000 - 0x00000000000FFFFF = Legacy memory area
-           0x00000 -            0x005FF = Reserved for BIOS
-           0x00600 -            0x006FF = Bootloader data
-           0x00700 -            0x007FF = MBR bootstrap after relocation
-           0x00800 -            0x009FF = E820 Memory map
-           0x00900 -            0x07BFF = Bootloader stack
-           0x07C00 -            0x7FFFF = Bootloader code (around 480KB of space)
+           0x00000 -            0x004FF = Reserved for BIOS
+           0x00500 -            0x006FF = MBR bootstrap and data after relocation
+           0x00500 -            0x006FF = E820 Memory map (overwrite MBR - we don't need it any more)
+           0x00700 -            0x01FFF = Bootloader stack
+           0x01000 -            0x7FFFF = Bootloader code (around 508KB of space)
            0x80000 -            0x9FFFF = Reserved for BIOS
            0xA0000 -            0xB7FFF = VGA video buffer
            0xB8000 -            0xBFFFF = VGA teletype buffer

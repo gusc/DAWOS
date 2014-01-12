@@ -108,17 +108,19 @@ uint64 page_available_mem();
 */
 uint64 page_normalize_vaddr(uint64 vaddr);
 /**
-* Identity map a physical address
+* Map a physical address to virtual address
 * @param paddr - physical address to map
-* @return virtual address
+* @param vaddr - virtual address to map to
+* @return true on success, false if virtual address is already taken
 */
-uint64 page_map(uint64 paddr);
+bool page_map(uint64 paddr, uint64 vaddr);
 /**
 * Identity map a physical address for memory maped IO (no cache!)
 * @param paddr - physical address to map
-* @return virtual address
+* @param vaddr - virtual address to map to
+* @return true on success, false if virtual address is already taken
 */
-uint64 page_map_mmio(uint64 paddr);
+bool page_map_mmio(uint64 paddr, uint64 vaddr);
 /**
 * Resolve physical address from virtual addres
 * @param vaddr - virtual address to resolve

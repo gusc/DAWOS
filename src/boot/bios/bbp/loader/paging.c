@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "paging.h"
 #include "memory.h"
 #include "lib.h"
+#include "cr.h"
 #if DEBUG == 1
 	#include "debug_print.h"
 #endif
@@ -88,7 +89,6 @@ static pm_t *_pml4;
 static uint64 _total_mem = 0;
 static uint64 _available_mem = 0;
 
-static uint64 _page_offset = 0;
 static uint64 *_page_frames;
 static uint64 _page_count = 0;
 
@@ -101,7 +101,7 @@ static uint64 page_placeholder = INIT_MEM;
 //#define PAGE_PML4_IDX_MASK 0xFF8000000000
 //#define PAGE_PML3_IDX_MASK 0x7FC0000000
 //#define PAGE_PML2_IDX_MASK 0x3FE00000
-#define PAGE_PML_IDX_MASK 0x1FF000
+#define PAGE_PML_IDX_MASK 0x1FF
 #if PAGE_LEVELS == 2
 	#define PAGE_OFFSET_MASK   0x3FFFFF
 #elif PAGE_LEVELS == 3
@@ -115,7 +115,7 @@ static uint64 page_placeholder = INIT_MEM;
 * @param lvl - PML level
 * @return idx - index of the entry
 */
-#define PAGE_PML_IDX(va, lvl) ((va & PAGE_PML_IDX_MASK) << ((lvl - 1) * 9))
+#define PAGE_PML_IDX(va, lvl) ((va >> (12 + ((lvl - 1) * 9))) & PAGE_PML_IDX_MASK)
 /**
 * Get bitset index
 * @param p - page number
@@ -194,13 +194,6 @@ static void parse_e820(e820map_t *mem_map){
 	}
 	// Get total RAM
 	for (i = 0; i < mem_map->size; i ++){
-#if DEBUG == 1
-		if (mem_map->entries[i].type >= 1 && mem_map->entries[i].type <= 5){
-			debug_print(DC_WB, "%x -> %x (%s)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, types[mem_map->entries[i].type - 1]);
-		} else {
-			debug_print(DC_WB, "%x -> %x (%d)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, mem_map->entries[i].type);
-		}
-#endif
 		if (mem_map->entries[i].type != kMemReserved){
 			if (mem_map->entries[i].base + mem_map->entries[i].length > _total_mem){
 				_total_mem = mem_map->entries[i].base + mem_map->entries[i].length;
@@ -213,7 +206,7 @@ static void parse_e820(e820map_t *mem_map){
 }
 
 void page_init(uint64 ammount){
-	_pml4 = (pm_t *)page_get_pml4();
+	_pml4 = (pm_t *)get_cr3();
 	// Read E820 memory map and mark used regions
 	e820map_t *mem_map = (e820map_t *)E820_LOC;
 	// Parse memory map
@@ -221,17 +214,22 @@ void page_init(uint64 ammount){
 		
 	// Calculate total frame count
 	_page_count = _total_mem / PAGE_SIZE;
+#if DEBUG == 1
+	debug_print(DC_WB, "Frames: %d", _page_count);
+#endif
+
+	// Identity map rest of the memory
+	uint64 i = _page_count - (INIT_MEM / PAGE_SIZE);
+	for (; i < _page_count; i ++){
+		page_map(i * PAGE_SIZE, i * PAGE_SIZE);
+	}
+
 	// Allocate frame bitset at the next page boundary
 	_page_frames = (uint64 *)mem_alloc(_page_count / 8);
 	// Clear bitset
 	mem_fill((uint8 *)_page_frames, _page_count / 8, 0);
 
-#if DEBUG == 1
-	debug_print(DC_WB, "Frames: %d", _page_count);
-#endif
-
 	// Determine unusable memory regions
-	uint64 i;
 	uint64 paddr_from;
 	uint64 paddr_to;
 	for (i = 0; i < mem_map->size; i ++){
@@ -246,16 +244,11 @@ void page_init(uint64 ammount){
 		}
 	}
 
-	_page_offset = (uint64)_page_frames;
-	_page_offset += _page_count / 8;
-	_page_offset = PAGE_SIZE_ALIGN(_page_offset);
-
 	// Register page fault handler
 	interrupt_reg_handler(14, page_fault);
 }
 uint64 page_fault(int_stack_t *stack){
-	uint64 cr2 = 0;
-	asm volatile ("mov %%cr2, %0" : "=a"(cr2) :);
+	uint64 fail_addr = get_cr2();
 #if DEBUG == 1
 	// From JamesM tutorials
 	int present   = !(stack->err_code & 0x1); // Page not present
@@ -270,13 +263,20 @@ uint64 page_fault(int_stack_t *stack){
 	if (us) {debug_print(DC_WRD, "user-mode ");}
 	if (reserved) {debug_print(DC_WRD, "reserved ");}
 	debug_print(DC_WRD, "Error: %x", stack->err_code);
-	debug_print(DC_WRD, "Addr: @%x", cr2);
+	debug_print(DC_WRD, "Addr: @%x", fail_addr);
 #endif
 
+	HANG();
+			
+
 	// Map this page if it's not mapped yet, otherwise hang
-	if (!page_resolve(cr2)){
-		page_map(cr2);
+	if (!page_resolve(fail_addr)){
+		if (!page_map(fail_addr, fail_addr)){
+			HANG();
+			return 1;
+		}
 	} else {
+		HANG();
 		return 1;
 	}
 	return 0;
@@ -287,11 +287,11 @@ uint64 page_total_mem(){
 uint64 page_available_mem(){
 	return _available_mem;
 }
-uint64 page_id_map(uint64 paddr, bool mmio){
+bool page_id_map(uint64 paddr, uint64 vaddr, bool mmio){
 	// Do the identity map
 	pm_t *table = (pm_t *)page_get_pml4();
 	pm_t *ct;
-	uint64 vaddr = PAGE_CANONICAL(paddr);
+	vaddr = PAGE_CANONICAL(vaddr);
 	uint8 i = 4;
 	uint64 idx = PAGE_PML_IDX(vaddr, i);
 	for (i = 3; i >= 1; i --){
@@ -300,11 +300,13 @@ uint64 page_id_map(uint64 paddr, bool mmio){
 			ct = (pm_t *)mem_alloc_align(sizeof(pm_t) * 512);
 			mem_fill((uint8 *)ct, sizeof(pm_t) * 512, 0);
 
+			// Store the physical address
 			table[idx].raw = (uint64)ct;
+			// Set the flags
 			table[idx].s.present = 1;
 			table[idx].s.writable = 1;
+			table[idx].s.write_through = 1;
 			if (mmio){
-				table[idx].s.write_through = 1;
 				table[idx].s.cache_disable = 1;
 			}
 			// Continiue with the newly created table
@@ -317,24 +319,25 @@ uint64 page_id_map(uint64 paddr, bool mmio){
 		idx = PAGE_PML_IDX(vaddr, i);
 	}
 	// Last level table
-	table = (pm_t *)PAGE_ADDRESS(table, idx);
 	if (!table[idx].s.present){
+		// Store physical address
+		table[idx].raw = (paddr & PAGE_MASK);
+		// Set the flags
 		table[idx].s.present = 1;
 		table[idx].s.writable = 1;
+		table[idx].s.write_through = 1;
 		if (mmio){
-			table[idx].s.write_through = 1;
 			table[idx].s.cache_disable = 1;
 		}
+		return true;
 	}
-	// Store physical address
-	table[idx].raw = (paddr & PAGE_MASK);
-	return vaddr;
+	return false;
 }
-uint64 page_map(uint64 paddr){
-	return page_id_map(paddr, false);
+bool page_map(uint64 paddr, uint64 vaddr){
+	return page_id_map(paddr, vaddr, false);
 }
-uint64 page_map_mmio(uint64 paddr){
-	return page_id_map(paddr, true);
+bool page_map_mmio(uint64 paddr, uint64 vaddr){
+	return page_id_map(paddr, vaddr, true);
 }
 uint64 page_resolve(uint64 vaddr){
 	pm_t *table = (pm_t *)page_get_pml4();
@@ -360,7 +363,7 @@ uint64 page_alloc(){
 	debug_print(DC_WB, "Try to allocate: %x", vaddr);
 #endif
 	if (!page_resolve(vaddr)){
-		if (page_map(vaddr)){
+		if (page_map(vaddr, vaddr)){
 			page_placeholder += PAGE_SIZE;
 			return vaddr;
 		}
@@ -389,13 +392,9 @@ void page_free(uint64 vaddr){
 }
 
 uint64 page_get_pml4(){
-	uint64 paddr;
-	asm volatile("mov %%cr3, %0" : "=a"(paddr) : );
-	return PAGE_ALIGN(paddr);
+	return get_cr3();
 }
 
 void page_set_pml4(uint64 paddr){
-	paddr = PAGE_ALIGN(paddr);
-	paddr |= 0xB; // Set present, writable, write-through bits
-	asm volatile("mov %0, %%cr3" : : "r"(paddr));
+	set_cr3(paddr);
 }
