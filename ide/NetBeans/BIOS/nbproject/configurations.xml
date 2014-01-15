@@ -8,12 +8,10 @@
           <in>main32.c</in>
         </df>
         <df name="loader">
-          <in>acpi.c</in>
           <in>ahci.c</in>
-          <in>apic.c</in>
+          <in>cmos.h</in>
           <in>debug_print.c</in>
           <in>interrupts.c</in>
-          <in>kmain.c</in>
           <in>lib.c</in>
           <in>paging.c</in>
           <in>pci.c</in>
@@ -63,13 +61,6 @@
         <cTool>
         </cTool>
       </item>
-      <item path="../../../src/boot/bios/bbp/loader/acpi.c"
-            ex="false"
-            tool="0"
-            flavor2="2">
-        <cTool>
-        </cTool>
-      </item>
       <item path="../../../src/boot/bios/bbp/loader/ahci.c"
             ex="false"
             tool="0"
@@ -77,12 +68,10 @@
         <cTool>
         </cTool>
       </item>
-      <item path="../../../src/boot/bios/bbp/loader/apic.c"
+      <item path="../../../src/boot/bios/bbp/loader/cmos.h"
             ex="false"
-            tool="0"
-            flavor2="2">
-        <cTool>
-        </cTool>
+            tool="3"
+            flavor2="0">
       </item>
       <item path="../../../src/boot/bios/bbp/loader/debug_print.c"
             ex="false"
@@ -92,13 +81,6 @@
         </cTool>
       </item>
       <item path="../../../src/boot/bios/bbp/loader/interrupts.c"
-            ex="false"
-            tool="0"
-            flavor2="2">
-        <cTool>
-        </cTool>
-      </item>
-      <item path="../../../src/boot/bios/bbp/loader/kmain.c"
             ex="false"
             tool="0"
             flavor2="2">

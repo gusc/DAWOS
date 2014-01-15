@@ -122,6 +122,9 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\cr.h">
       <Filter>bbp\loader</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\cmos.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c">
