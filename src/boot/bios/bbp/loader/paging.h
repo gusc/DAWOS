@@ -38,47 +38,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "common.h"
 #include "interrupts.h"
 
-typedef union {
-	struct {
-		uint64 present			: 1;	// Is the page present in memory?
-		uint64 writable			: 1;	// Is the page writable?
-		uint64 user				: 1;	// Is the page for userspace?
-		uint64 write_through	: 1;	// Do we want write-trough? (when cached, this also writes to memory)
-		uint64 cache_disable	: 1;	// Disable cache on this page?
-		uint64 accessed			: 1;	// Has the page been accessed by software?
-		uint64 dirty			: 1;	// Has the page been written to since last refresh? (ignored in PML4E, PML3E, PML2E)
-		uint64 pat				: 1;	// Page attribute table (in PML1E), 
-										// page size bit (must be 0 in PML4E, in PML3E 1 = 1GB page size, in PML2E 1 = 2MB page size otherwise 4KB pages are used)
-		uint64 global			: 1;	// Is the page global? (ignored in PML4E, PML3E, PML2E)
-		uint64 data				: 3;	// Ignored (ignored in all PML levels)
-		uint64 frame			: 40;	// Frame address (4KB aligned)
-		uint64 data2			: 11;	// Ignored (ignored in all PML levels)
-		uint64 xd				: 1;	// Execute disable bit (whole region is not accessible by instruction fetch)
-	} s;
-	uint64 raw;							// Raw value
-} pm_t;
-
-typedef union {
-	struct {
-		uint64 offset			: 12;	// Offset from the begining of page
-		uint64 page_idx			: 9;	// Page index (in pml1)
-		uint64 table_idx		: 9;	// Table index (in pml2)
-		uint64 directory_idx	: 9;	// Directory index (in pml3)
-		uint64 drawer_idx		: 9;	// Drawer index (in pml4)
-		uint64 canonical		: 16;	// Should be FFF... if drawer_idx 9th bit is 1 (see: canonical address)
-	} s;
-	uint64 raw;
-} vaddr_t;
-
 // Page masks
 #define PAGE_IMASK         (PAGE_SIZE - 1) // Inverse mask
 #define PAGE_MASK          (~PAGE_IMASK)
-// Align address to page start boundary
+/**
+* Align address to page start boundary
+* @param n - address to align
+* @return aligned address
+*/
 #define PAGE_ALIGN(n) (n & PAGE_MASK)
-// Align size to page end boundary
+/**
+* Align address to page end boundary
+* @param n - address to align
+* @return aligned address
+*/
 #define PAGE_SIZE_ALIGN(n) ((n + PAGE_IMASK) & PAGE_MASK)
-// Make virtual address canonical (sign extend)
-#define PAGE_CANONICAL(va) ((va << 16) >> 16)
 
 /**
 * Initialize paging

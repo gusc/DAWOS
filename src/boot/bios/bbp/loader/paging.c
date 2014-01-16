@@ -79,7 +79,31 @@ struct e820map_struct {
 } __PACKED;
 typedef struct e820map_struct e820map_t;
 
+typedef struct {
+	uint64 present			: 1;	// Is the page present in memory?
+	uint64 writable			: 1;	// Is the page writable?
+	uint64 user				: 1;	// Is the page for userspace?
+	uint64 write_through	: 1;	// Do we want write-trough? (when cached, this also writes to memory)
+	uint64 cache_disable	: 1;	// Disable cache on this page?
+	uint64 accessed			: 1;	// Has the page been accessed by software?
+	uint64 dirty			: 1;	// Has the page been written to since last refresh? (ignored in PML4E, PML3E, PML2E)
+	uint64 pat				: 1;	// Page attribute table (in PML1E), 
+									// page size bit (must be 0 in PML4E, in PML3E 1 = 1GB page size, in PML2E 1 = 2MB page size otherwise 4KB pages are used)
+	uint64 global			: 1;	// Is the page global? (ignored in PML4E, PML3E, PML2E)
+	uint64 data				: 3;	// Ignored (ignored in all PML levels)
+	uint64 frame			: 40;	// Frame address (4KB aligned)
+	uint64 data2			: 11;	// Ignored (ignored in all PML levels)
+	uint64 xd				: 1;	// Execute disable bit (whole region is not accessible by instruction fetch)
+} pm_t;
 
+typedef struct {
+	uint64 offset			: 12;	// Offset from the begining of page
+	uint64 page_idx			: 9;	// Page index (in pml1)
+	uint64 table_idx		: 9;	// Table index (in pml2)
+	uint64 directory_idx	: 9;	// Directory index (in pml3)
+	uint64 drawer_idx		: 9;	// Drawer index (in pml4)
+	uint64 canonical		: 16;	// Should be FFF... if drawer_idx 9th bit is 1 (see: canonical address)
+} vaddr_t;
 
 /**
 * Page table structures
@@ -97,11 +121,12 @@ static uint64 _page_count = 0;
 */
 static uint64 page_placeholder = INIT_MEM;
 
-// Virtual address parts masks
-//#define PAGE_PML4_IDX_MASK 0xFF8000000000
-//#define PAGE_PML3_IDX_MASK 0x7FC0000000
-//#define PAGE_PML2_IDX_MASK 0x3FE00000
+
+// Make virtual address canonical (sign extend)
+#define PAGE_CANONICAL(va) ((va << 16) >> 16)
+// Page table entry index mask
 #define PAGE_PML_IDX_MASK 0x1FF
+// Page offset mask
 #if PAGE_LEVELS == 2
 	#define PAGE_OFFSET_MASK   0x3FFFFF
 #elif PAGE_LEVELS == 3
@@ -109,6 +134,8 @@ static uint64 page_placeholder = INIT_MEM;
 #else
 	#define PAGE_OFFSET_MASK   0xFFF
 #endif
+// Page frame mask (40bits shifter 12bits left)
+#define PAGE_FRAME_MASK 0xFFFFFFFFFF000
 /**
 * Get table entry index from virtual address
 * @param va - virtual address
@@ -116,6 +143,19 @@ static uint64 page_placeholder = INIT_MEM;
 * @return idx - index of the entry
 */
 #define PAGE_PML_IDX(va, lvl) ((va >> (12 + ((lvl - 1) * 9))) & PAGE_PML_IDX_MASK)
+/**
+* Get the physical address from page table at index
+* @param pt - page table
+* @param idx - index of the entry
+* @return paddr - physical address
+*/
+#define PAGE_ADDRESS(pt, idx) (((uint64 *)pt)[idx] & PAGE_FRAME_MASK)
+/**
+* Get page frame number from physical address (52bit)
+* @param paddr - physical address
+* @return frame - frame number
+*/
+#define PAGE_FRAME(paddr) ((paddr & PAGE_FRAME_MASK) >> 12)
 /**
 * Get bitset index
 * @param p - page number
@@ -128,13 +168,6 @@ static uint64 page_placeholder = INIT_MEM;
 * @return offset
 */
 #define PAGE_FRAME_BIT(p) (p % 64)
-/**
-* Get the physical address from page table at index
-* @param pt - page table
-* @param idx - index of the entry
-* @return paddr - physical address
-*/
-#define PAGE_ADDRESS(pt, idx) (((pm_t *)pt)[idx].raw & PAGE_MASK)
 
 /**
 * Mark frame allocated
@@ -219,7 +252,7 @@ void page_init(uint64 ammount){
 #endif
 
 	// Identity map rest of the memory
-	uint64 i = _page_count - (INIT_MEM / PAGE_SIZE);
+	uint64 i = (INIT_MEM / PAGE_SIZE);
 	for (; i < _page_count; i ++){
 		page_map(i * PAGE_SIZE, i * PAGE_SIZE);
 	}
@@ -291,43 +324,46 @@ bool page_id_map(uint64 paddr, uint64 vaddr, bool mmio){
 	// Do the identity map
 	pm_t *table = (pm_t *)page_get_pml4();
 	pm_t *ct;
+	uint8 i;
+	uint64 idx;
 	vaddr = PAGE_CANONICAL(vaddr);
-	uint8 i = 4;
-	uint64 idx = PAGE_PML_IDX(vaddr, i);
-	for (i = 3; i >= 1; i --){
-		if (!table[idx].s.present){
+	for (i = 4; i > 1; i --){
+		// Get page table entry index from the virtual address
+		idx = PAGE_PML_IDX(vaddr, i);
+		if (!table[idx].present){
 			// Next level table does not exist - create one
 			ct = (pm_t *)mem_alloc_align(sizeof(pm_t) * 512);
 			mem_fill((uint8 *)ct, sizeof(pm_t) * 512, 0);
 
 			// Store the physical address
-			table[idx].raw = (uint64)ct;
+			table[idx].frame = PAGE_FRAME((uint64)ct);
 			// Set the flags
-			table[idx].s.present = 1;
-			table[idx].s.writable = 1;
-			table[idx].s.write_through = 1;
+			table[idx].present = 1;
+			table[idx].writable = 1;
+			table[idx].write_through = 1;
 			if (mmio){
-				table[idx].s.cache_disable = 1;
+				table[idx].cache_disable = 1;
 			}
 			// Continiue with the newly created table
 			table = ct;
 		} else {
 			// Find next level table address
 			table = (pm_t *)PAGE_ADDRESS(table, idx);
+			//debug_print(DC_WB, "Entry: @%x", (uint64)table);
 		}
-		// Find next level index
-		idx = PAGE_PML_IDX(vaddr, i);
 	}
+	// Get page index in PML1 table from virtual address 
+	idx = PAGE_PML_IDX(vaddr, 1);
 	// Last level table
-	if (!table[idx].s.present){
+	if (!table[idx].present){
 		// Store physical address
-		table[idx].raw = (paddr & PAGE_MASK);
+		table[idx].frame = PAGE_FRAME(paddr);
 		// Set the flags
-		table[idx].s.present = 1;
-		table[idx].s.writable = 1;
-		table[idx].s.write_through = 1;
+		table[idx].present = 1;
+		table[idx].writable = 1;
+		table[idx].write_through = 1;
 		if (mmio){
-			table[idx].s.cache_disable = 1;
+			table[idx].cache_disable = 1;
 		}
 		return true;
 	}
@@ -344,7 +380,7 @@ uint64 page_resolve(uint64 vaddr){
 	uint8 i = 4;
 	uint64 idx = PAGE_PML_IDX(vaddr, i);
 	for (i = 3; i >= 1; i --){
-		if (table[idx].s.present){
+		if (table[idx].present){
 			// Next level table exists - load it's address
 			table = (pm_t *)PAGE_ADDRESS(table, idx);
 			// Get next level index from this table
@@ -376,7 +412,7 @@ void page_free(uint64 vaddr){
 	uint8 i = 4;
 	uint64 idx = PAGE_PML_IDX(vaddr, i);
 	for (i = 3; i >= 1; i --){
-		if (table[idx].s.present){
+		if (table[idx].present){
 			// Next level table exists - load it's address
 			table = (pm_t *)PAGE_ADDRESS(table, idx);
 			// Get next level index from this table
@@ -385,8 +421,8 @@ void page_free(uint64 vaddr){
 			return;
 		}
 	}
-	table[idx].s.present = 0;
-	uint64 paddr = table[idx].raw & PAGE_MASK;
+	table[idx].present = 0;
+	uint64 paddr = PAGE_ADDRESS(table, idx);
 	page_clear_frame(paddr);
 	// TODO: check if some page table is empty and delete it's parent
 }

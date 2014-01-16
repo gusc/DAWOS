@@ -125,31 +125,31 @@ static void setup_pages(uint64 ammount){
 	// Set up pages, tables, directories and drawers in the cabinet :)
 	for (p = 0; p < page_count; p ++){
 		ptr = (uint64)(p * PAGE_SIZE);
-		pml1[p].raw = ptr & PAGE_MASK;
-		pml1[p].s.present = 1;
-		pml1[p].s.writable = 1;
-		pml1[p].s.write_through = 1;
+		pml1[p].frame = PAGE_FRAME(ptr);
+		pml1[p].present = 1;
+		pml1[p].writable = 1;
+		pml1[p].write_through = 1;
 	}
 	for (t = 0; t < table_count; t ++){
 		ptr = (uint64)(((uint32)pml1) + (sizeof(pm_t) * 512 * t));
-		pml2[t].raw = ptr & PAGE_MASK;
-		pml2[t].s.present = 1;
-		pml2[t].s.writable = 1;
-		pml2[t].s.write_through = 1;
+		pml2[t].frame = PAGE_FRAME(ptr);
+		pml2[t].present = 1;
+		pml2[t].writable = 1;
+		pml2[t].write_through = 1;
 	}
 	for (d = 0; d < directory_count; d ++){
 		ptr = (uint64)(((uint32)pml2) + (sizeof(pm_t) * 512 * d));
-		pml3[d].raw = ptr & PAGE_MASK;
-		pml3[d].s.present = 1;
-		pml3[d].s.writable = 1;
-		pml3[d].s.write_through = 1;
+		pml3[d].frame = PAGE_FRAME(ptr);
+		pml3[d].present = 1;
+		pml3[d].writable = 1;
+		pml3[d].write_through = 1;
 	}
 	for (dr = 0; dr < drawer_count; dr ++){
 		ptr = (uint64)(((uint32)pml3) + (sizeof(pm_t) * 512 * dr));
-		pml4[dr].raw = ptr & PAGE_MASK;
-		pml4[dr].s.present = 1;
-		pml4[dr].s.writable = 1;
-		pml4[dr].s.write_through = 1;
+		pml4[dr].frame = PAGE_FRAME(ptr);
+		pml4[dr].present = 1;
+		pml4[dr].writable = 1;
+		pml4[dr].write_through = 1;
 	}
 
 	// Set PML4 pointer address

@@ -515,26 +515,30 @@ void *heap_realloc(heap_t * heap, void *ptr, uint64 psize, bool align){
 }
 
 void heap_free(heap_t * heap, void *ptr){
-	free_block_t *free_block = (free_block_t *)HEAP_PAYLOAD_HEADER(ptr);
-	if (HEAP_CHECK_HEADER(free_block)){
-		// Clear used in header
-		free_block->header.block.s.used = 0;
+	if (ptr != 0){
+		free_block_t *free_block = (free_block_t *)HEAP_PAYLOAD_HEADER(ptr);
+		if (HEAP_CHECK_HEADER(free_block)){
+			// Clear used in header
+			free_block->header.block.s.used = 0;
 
-		// Try to merge on the left side
-		free_block = heap_merge_left(heap, free_block);
+			// Try to merge on the left side
+			free_block = heap_merge_left(heap, free_block);
 		
-		// Try to merge on the right side
-		heap_merge_right(heap, free_block);
+			// Try to merge on the right side
+			heap_merge_right(heap, free_block);
 
-		// Add this block back to list or tree
-		heap_add_free(heap, free_block);
+			// Add this block back to list or tree
+			heap_add_free(heap, free_block);
+		}
 	}
 }
 
 uint64 heap_alloc_size(void *ptr){
-	free_block_t *free_block = (free_block_t *)HEAP_PAYLOAD_HEADER(ptr);
-	if (HEAP_CHECK_HEADER(free_block)){
-		return HEAP_PSIZE(HEAP_GET_USIZE(free_block));
+	if (ptr != 0){
+		free_block_t *free_block = (free_block_t *)HEAP_PAYLOAD_HEADER(ptr);
+		if (HEAP_CHECK_HEADER(free_block)){
+			return HEAP_PSIZE(HEAP_GET_USIZE(free_block));
+		}
 	}
 	return 0;
 }
