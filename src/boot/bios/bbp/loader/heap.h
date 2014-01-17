@@ -104,6 +104,8 @@ struct free_block_struct {
 	heap_header_t header;
 	free_block_t *prev_block;
 	free_block_t *next_block;
+	free_block_t *parent_block;
+	uint64 reserved;
 } __PACKED;
 /**
 * Heap structure

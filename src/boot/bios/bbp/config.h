@@ -71,9 +71,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PADDR_LOC 0x100000
 // Minimum free block size listed in segregated lists in bytes (16 is a minumum on 64bit systems, 
 // as we have to store 2 pointers in free blocks, each 8 bytes)
-#define HEAP_LIST_MIN 16
+#define HEAP_LIST_MIN 32
 // Maximum free block size listed in segregated lists in bytes (larger ones go to a binary search tree)
-#define HEAP_LIST_MAX 512
+#define HEAP_LIST_MAX 1024
 // Maximum heap size (50MB for now)
 #define HEAP_MAX_SIZE 0x3200000
 

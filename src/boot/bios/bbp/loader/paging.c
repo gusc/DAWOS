@@ -112,8 +112,6 @@ static pm_t *_pml4;
 
 static uint64 _total_mem = 0;
 static uint64 _available_mem = 0;
-
-static uint64 *_page_frames;
 static uint64 _page_count = 0;
 
 /**
@@ -156,50 +154,6 @@ static uint64 page_placeholder = INIT_MEM;
 * @return frame - frame number
 */
 #define PAGE_FRAME(paddr) ((paddr & PAGE_FRAME_MASK) >> 12)
-/**
-* Get bitset index
-* @param p - page number
-* @return index
-*/
-#define PAGE_FRAME_INDEX(p) (p / 64)
-/**
-* Get bit offset in bitset
-* @param p - page number
-* @return offset
-*/
-#define PAGE_FRAME_BIT(p) (p % 64)
-
-/**
-* Mark frame allocated
-* @param paddr - physical address to mark
-*/
-static void page_set_frame(uint64 paddr){
-    uint64 page = paddr / 4069;
-    uint64 idx = PAGE_FRAME_INDEX(page);
-    uint64 offset = PAGE_FRAME_BIT(page);
-	_page_frames[idx] |= (0x1 << offset);
-}
-/**
-* Mark frame free
-* @param paddr - physical address to mark
-*/
-static void page_clear_frame(uint64 paddr){
-    uint64 page = paddr / 4069;
-    uint64 idx = PAGE_FRAME_INDEX(page);
-    uint64 offset = PAGE_FRAME_BIT(page);
-	_page_frames[idx] &= ~(0x1 << offset);
-}
-/**
-* Check if frame is allocated or free
-* @param paddr - physical address to check
-* @return true if set false if not
-*/
-static bool page_check_frame(uint64 paddr){
-    uint64 page = paddr / 4069;
-    uint64 idx = PAGE_FRAME_INDEX(page);
-    uint64 offset = PAGE_FRAME_BIT(page);
-    return (_page_frames[idx] & (0x1 << offset));
-}
 
 /**
 * Parse memory map and sort in ascending order
@@ -255,26 +209,6 @@ void page_init(uint64 ammount){
 	uint64 i = (INIT_MEM / PAGE_SIZE);
 	for (; i < _page_count; i ++){
 		page_map(i * PAGE_SIZE, i * PAGE_SIZE);
-	}
-
-	// Allocate frame bitset at the next page boundary
-	_page_frames = (uint64 *)mem_alloc(_page_count / 8);
-	// Clear bitset
-	mem_fill((uint8 *)_page_frames, _page_count / 8, 0);
-
-	// Determine unusable memory regions
-	uint64 paddr_from;
-	uint64 paddr_to;
-	for (i = 0; i < mem_map->size; i ++){
-		if (mem_map->entries[i].type != kMemOk){
-			// Mark all unusable regions used
-			paddr_from = (mem_map->entries[i].base & PAGE_MASK);
-			paddr_to = ((mem_map->entries[i].base + mem_map->entries[i].length) & PAGE_MASK);
-			while (paddr_from < paddr_to){
-				page_set_frame(paddr_from);
-				paddr_from += PAGE_SIZE;
-			}
-		}
 	}
 
 	// Register page fault handler
@@ -423,7 +357,6 @@ void page_free(uint64 vaddr){
 	}
 	table[idx].present = 0;
 	uint64 paddr = PAGE_ADDRESS(table, idx);
-	page_clear_frame(paddr);
 	// TODO: check if some page table is empty and delete it's parent
 }
 

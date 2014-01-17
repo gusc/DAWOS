@@ -170,6 +170,74 @@ static free_block_t *heap_split(free_block_t *free_block, uint64 psize){
 	return 0;
 }
 /**
+* Add a free block to a free block search tree
+* @param heap - pointer to the beginning of the heap
+* @param free_block - block to add
+*/
+static void heap_add_free_tree(heap_t *heap, free_block_t *free_block){
+	if (heap->free_tree == 0){
+		// As easy as it can be
+		heap->free_tree = free_block;
+		heap->free_tree->next_block = 0;
+		heap->free_tree->prev_block = 0;
+		heap->free_tree->parent_block = 0;
+	} else {
+		uint64 usize = HEAP_GET_USIZE(free_block);
+		free_block_t *parent_block = heap->free_tree;
+		free_block_t *parent_prev = 0;
+		uint64 parent_usize;
+		bool set = false;
+		while (!set){
+			parent_usize = HEAP_GET_USIZE(parent_block);
+			if (parent_usize > usize){
+				// Smaller than selected
+				if (parent_block->prev_block == 0){
+					// No more where to go - store here
+					parent_block->prev_block = free_block;
+					free_block->parent_block = parent_block;
+					set = true;
+				} else {
+					// Move to previous
+					parent_block = parent_block->prev_block;
+				}
+			} else if (parent_usize < usize){
+				// Larger than selected
+				if (parent_block->next_block == 0){
+					// No more where to go - store here
+					parent_block->next_block = free_block;
+					free_block->parent_block = parent_block;
+					set = true;
+				} else {
+					// Move to next
+					parent_block = parent_block->next_block;
+				}
+			} else {
+				// Equal in size - insert before
+				if (parent_block->parent_block == 0){
+					// Parent is the first block
+					free_block->parent_block = 0;
+					free_block->next_block = heap->free_tree;
+					heap->free_tree->parent_block = free_block
+					heap->free_tree = free_block;
+				} else if (parent_block->parent_block->next_block == parent_block){
+					// It was a larger block
+					parent_block->parent_block->next_block = free_block;
+					free_block->parent_block = parent_block->parent_block;
+					free_block->next_block = parent_block;
+					parent_block->parent_block = free_block;
+				} else if (parent_block->parent_block->prev_block == parent_block){
+					// It was a smaller block
+					parent_block->parent_block->prev_block = free_block;
+					free_block->parent_block = parent_block->parent_block;
+					free_block->prev_block = parent_block;
+					parent_block->parent_block = free_block;
+				}
+				set = true;
+			}
+		}
+	}
+}
+/**
 * Add a free block to the segregated list or a binary search tree
 * @param heap - pointer to the beginning of the heap
 * @param free_block - block to add
@@ -180,61 +248,59 @@ static void heap_add_free(heap_t *heap, free_block_t *free_block){
 	int8 list_idx = HEAP_SIZE_IDX(psize);
 	if (list_idx >= 0){
 		// Add to the list
+		free_block->parent_block = 0;
 		free_block->next_block = heap->free_list[list_idx];
 		if (free_block->next_block != 0){
 			free_block->next_block->prev_block = free_block;
 		}
 		heap->free_list[list_idx] = free_block;
 	} else {
-		uint64 tree_usize = HEAP_GET_USIZE(heap->free_tree);
-		if (heap->free_tree == 0){
-			// As easy as it can be
-			heap->free_tree = free_block;
-		} else if (usize == tree_usize){
-			// Add to the right
-			if (heap->free_tree->next_block != 0){
-				heap->free_tree->next_block->prev_block = free_block;
+		heap_add_free_tree(heap, free_block);
+	}
+}
+/**
+* Remove a free block from the free block search tree
+* @param heap - pointer to the beginning of the heap
+* @param free_block - block to remove
+*/
+static void heap_remove_free_tree(heap_t *heap, free_block_t *free_block){
+	if (free_block->prev_block == 0){
+		if (free_block->next_block == 0){
+			// This was the only block in the tree
+			if (free_block == heap->free_tree){
+				heap->free_tree = 0;
 			}
-			free_block->next_block = heap->free_tree->next_block;
-			free_block->prev_block = heap->free_tree;
-			heap->free_tree->next_block = free_block;
-		} else if (usize > tree_usize){
-			// Move to the right and insert the block right before the larger block
-			free_block_t *free_right = heap->free_tree;
-			while (free_right->next_block != 0 && HEAP_GET_USIZE(free_right->next_block) < usize){
-				free_right = free_right->next_block;
-			}
-			if (free_right->next_block != 0){
-				free_right->next_block->prev_block = free_block;
-				free_block->next_block = free_right->next_block;
-			} else {
-				free_block->next_block = 0;
-			}
-			free_block->prev_block = free_right;
-			free_right->next_block = free_block;
 		} else {
-			// Move to the left and insert the block right before the smaller block
-			free_block_t *free_left = heap->free_tree;
-			while (free_left->prev_block != 0 && HEAP_GET_USIZE(free_left->prev_block) > usize){
-				free_left = free_left->prev_block;
+			// Left most block
+			free_block->next_block->prev_block = 0;
+			if (free_block == heap->free_tree){
+				heap->free_tree = free_block->next_block;
 			}
-			if (free_left->prev_block != 0){
-				free_left->prev_block->next_block = free_block;
-				free_block->prev_block = free_left->prev_block;
-			} else {
-				free_block->prev_block = 0;
+		}
+	} else {
+		if (free_block->next_block == 0){
+			// Right most block
+			free_block->prev_block->next_block = 0;
+			if (free_block == heap->free_tree){
+				heap->free_tree = free_block->prev_block;
 			}
-			free_block->next_block = free_left;
-			free_left->prev_block = free_block;
+		} else {
+			// Somewhere in the middle
+			free_block->prev_block->next_block = free_block->next_block;
+			free_block->next_block->prev_block = free_block->prev_block;
+			if (free_block == heap->free_tree){
+				heap->free_tree = free_block->next_block;
+			}
 		}
 	}
 }
 /**
-* Remove a free block from the segregated list or a binary search tree
+* Remove a free block from a free list
 * @param heap - pointer to the beginning of the heap
 * @param free_block - block to remove
+* @return true on success
 */
-static void heap_remove_free(heap_t *heap, free_block_t *free_block){
+static bool heap_remove_free_list(heap_t *heap, free_block_t *free_block){
 	uint64 usize = HEAP_GET_USIZE(free_block);
 	uint64 psize = usize - HEAP_OVERHEAD;
 	int8 list_idx = HEAP_SIZE_IDX(psize);
@@ -258,39 +324,27 @@ static void heap_remove_free(heap_t *heap, free_block_t *free_block){
 				free_block->prev_block->next_block = 0;
 			}
 		}
-	} else {
-		if (free_block->prev_block == 0){
-			if (free_block->next_block == 0){
-				// This was the only block in the tree
-				if (free_block == heap->free_tree){
-					heap->free_tree = 0;
-				}
-			} else {
-				// Left most block
-				free_block->next_block->prev_block = 0;
-				if (free_block == heap->free_tree){
-					heap->free_tree = free_block->next_block;
-				}
-			}
-		} else {
-			if (free_block->next_block == 0){
-				// Right most block
-				free_block->prev_block->next_block = 0;
-				if (free_block == heap->free_tree){
-					heap->free_tree = free_block->prev_block;
-				}
-			} else {
-				// Somewhere in the middle
-				free_block->prev_block->next_block = free_block->next_block;
-				free_block->next_block->prev_block = free_block->prev_block;
-				if (free_block == heap->free_tree){
-					heap->free_tree = free_block->next_block;
-				}
-			}
-		}
+		return true;
+	}
+	return false;
+}
+/**
+* Remove a free block from the segregated list or a binary search tree
+* @param heap - pointer to the beginning of the heap
+* @param free_block - block to remove
+*/
+static void heap_remove_free(heap_t *heap, free_block_t *free_block){
+	if (!heap_remove_free_list(heap, free_block)){
+		heap_remove_free_tree(heap, free_block);
 	}
 }
-
+/**
+* Find a free list in the free block list
+* @param heap - pointer to the beginning of the heap
+* @param psize - payload size
+* @param align - align the block to a page boundary
+* @return a free block
+*/
 static free_block_t *heap_find_free_list(heap_t *heap, uint64 psize, bool align){
 	int8 list_idx = HEAP_SIZE_IDX(psize);
 	if (list_idx >= 0){
@@ -330,6 +384,13 @@ static free_block_t *heap_find_free_list(heap_t *heap, uint64 psize, bool align)
 	}
 	return 0;
 }
+/**
+* Find a free list in the free block search tree
+* @param heap - pointer to the beginning of the heap
+* @param psize - payload size
+* @param align - align the block to a page boundary
+* @return a free block
+*/
 static free_block_t *heap_find_free_tree(heap_t *heap, uint64 psize, bool align){
 	free_block_t *free_block = 0;
 	// Get used size
@@ -361,22 +422,6 @@ static free_block_t *heap_find_free_tree(heap_t *heap, uint64 psize, bool align)
 				free_block = free_left;
 			}
 		}
-	}
-	return free_block;
-}
-/**
-* Find a free block from the segregated list or a binary search tree
-* @param heap - pointer to the beginning of the heap
-* @param psize - required payload size
-* @param align - align the block to page boundary
-* @return a free block or 0
-*/
-static free_block_t *heap_find_free(heap_t *heap, uint64 psize, bool align){
-	psize = HEAP_ALIGN(psize);
-	
-	free_block_t *free_block = heap_find_free_list(heap, psize, align);
-	if (free_block == 0){
-		free_block = heap_find_free_tree(heap, psize, align);	
 	}
 	return free_block;
 }
@@ -476,7 +521,11 @@ void *heap_alloc(heap_t * heap, uint64 psize, bool align){
 	psize = HEAP_ALIGN(psize);
 	
 	// Find the block in the list
-	free_block = heap_find_free(heap, psize, align);
+	free_block_t *free_block = heap_find_free_list(heap, psize, align);
+	if (free_block == 0){
+		// Didn't find it - look up in the tree
+		free_block = heap_find_free_tree(heap, psize, align);	
+	}
 	if (free_block == 0){
 		// Allocate a new page if all the free space has been used
 		free_block_t *free_block = heap_extend(heap, psize);
