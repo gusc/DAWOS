@@ -101,7 +101,7 @@ struct heap_struct {
 	uint64 end_addr;							// End address of the heap
 	uint64 max_addr;							// Maximum address of the heap
 	heap_header_t *free_list[HEAP_LIST_COUNT];	// Free block segregated list
-	heap_header_t *free_tree;					// Free block binary search tree
+	heap_header_t *free_tree;					// Free block sorted list
 } __ALIGN(16);
 typedef struct heap_struct heap_t;
 

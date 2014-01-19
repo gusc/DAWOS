@@ -263,6 +263,9 @@ void isr_wrapper(int_stack_t stack){
 		case 0: // Division by zero
 			//stack.rip++; // it's ok to divide by zero - move to next instruction :P
 			break;
+		case 6: // Invalid opcode
+			BREAK();
+			break;
 		case 13: // General protection fault
 #if DEBUG == 1
 			debug_print(DC_WRD, "Error: %x", stack.err_code);
