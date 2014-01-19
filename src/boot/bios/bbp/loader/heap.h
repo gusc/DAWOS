@@ -72,20 +72,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
 * Heap block size structure
 */
-typedef union {
-	struct {
-		uint64 used       : 1;
-		uint64 reserved   : 3; // Planned to implement locks and read/write attributes
-		uint64 frames     : 60; // Upper 60 bits of heap block size, let's call them frames (to mimic micro-paging)
-	} s;
-	uint64 size;
+typedef struct {
+	uint64 used       : 1;
+	uint64 reserved   : 3; // Planned to implement locks and read/write attributes
+	uint64 frames     : 60; // Upper 60 bits of heap block size, let's call them frames (to mimic micro-paging)
 } heap_size_t;
 /**
 * Heap block header structure
 */
 struct heap_header_struct {
 	uint64 magic;
-	heap_size_t block;
+	uint64 size;
 } __PACKED;
 typedef struct heap_header_struct heap_header_t;
 /**
@@ -97,25 +94,14 @@ struct heap_footer_struct {
 } __PACKED;
 typedef struct heap_footer_struct heap_footer_t;
 /**
-* Free block structure - header + pointers to next and previous blocks
-*/
-typedef struct free_block_struct free_block_t;
-struct free_block_struct {
-	heap_header_t header;
-	free_block_t *prev_block;
-	free_block_t *next_block;
-	free_block_t *parent_block;
-	uint64 reserved;
-} __PACKED;
-/**
 * Heap structure
 */
 struct heap_struct {
 	uint64 start_addr;							// Start address of the heap
 	uint64 end_addr;							// End address of the heap
 	uint64 max_addr;							// Maximum address of the heap
-	free_block_t *free_list[HEAP_LIST_COUNT];	// Free block segregated list
-	free_block_t *free_tree;					// Free block binary search tree
+	heap_header_t *free_list[HEAP_LIST_COUNT];	// Free block segregated list
+	heap_header_t *free_tree;					// Free block binary search tree
 } __ALIGN(16);
 typedef struct heap_struct heap_t;
 
