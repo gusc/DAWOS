@@ -87,7 +87,7 @@ void main64(){
 	mem_list();
 
 	uint64 addr = (uint64)mem_alloc_align(64);
-	debug_print(DC_WB, "Allocate 64 bytes @%x", addr);
+	debug_print(DC_WB, "Allocate 64 bytes page aligned @%x", addr);
 	mem_list();
 
 	debug_print(DC_WB, "Deallocate @%x", addr);
@@ -95,7 +95,7 @@ void main64(){
 	mem_list();
 
 	uint64 addrm = (uint64)mem_alloc_align(1048576);
-	debug_print(DC_WB, "Allocate 1MB @%x", addrm);
+	debug_print(DC_WB, "Allocate 1MB page aligned @%x", addrm);
 	mem_list();
 
 	uint64 addrm2 = (uint64)mem_alloc(1048576);

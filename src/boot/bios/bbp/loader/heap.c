@@ -314,9 +314,9 @@ static void heap_tree_delete(free_node_t **tree, heap_header_t *block){
 		// This is a child item
 		// Simply remove this block from it's parent
 		// There should never be any larger or smaller blocks for childs
-		free_block->parent_block->child_block = 0;
+		free_block->parent_block->child_block = free_block->child_block;
 	} else {
-		free_node_t *replacement;
+		free_node_t *replacement = 0;
 		if (free_block->child_block != 0){
 			// We have an equal child, just copy branches and move on
 			if (free_block->larger_block != 0){
@@ -459,12 +459,12 @@ static bool heap_list_push(free_item_t **list, heap_header_t *block){
 	return false;
 }
 /**
-* Remove a free block from a the segregated list
+* Delete a free block from the segregated list
 * @param heap - pointer to the free lists
 * @param bloc - block to remove
 * @return true on success
 */
-static bool heap_list_pop(free_item_t **list, heap_header_t *block){
+static bool heap_list_delete(free_item_t **list, heap_header_t *block){
 	uint64 usize = HEAP_GET_USIZE(block);
 	uint64 psize = usize - HEAP_OVERHEAD;
 	int8 list_idx = HEAP_SIZE_IDX(psize);
@@ -551,7 +551,7 @@ static heap_header_t * heap_merge_left(heap_t *heap, heap_header_t *block){
 			// Merge left
 			heap_header_t *free_left = (heap_header_t *)HEAP_GET_HEADER(prev_footer);
 			// Remove the right block
-			if (!heap_list_pop((free_item_t **)heap->free_list, free_left)){
+			if (!heap_list_delete((free_item_t **)heap->free_list, free_left)){
 				heap_tree_delete((free_node_t **)&heap->free_tree, free_left);
 			}
 			// Create new block
@@ -574,7 +574,7 @@ static void heap_merge_right(heap_t *heap, heap_header_t *block){
 			// Merge left
 			heap_header_t *free_right = (heap_header_t *)next_header;
 			// Remove the right block
-			if (!heap_list_pop((free_item_t **)heap->free_list, free_right)){
+			if (!heap_list_delete((free_item_t **)heap->free_list, free_right)){
 				heap_tree_delete((free_node_t **)&heap->free_tree, free_right);
 			}
 			// Create new block
@@ -649,7 +649,7 @@ void *heap_alloc(heap_t * heap, uint64 psize, bool align){
 		free_block = heap_extend(heap, psize);
 	} else {
 		// Remove block
-		if (!heap_list_pop((free_item_t **)heap->free_list, free_block)){
+		if (!heap_list_delete((free_item_t **)heap->free_list, free_block)){
 			heap_tree_delete((free_node_t **)&heap->free_tree, free_block);
 		}
 	}
