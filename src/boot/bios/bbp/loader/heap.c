@@ -41,6 +41,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	#include "debug_print.h"
 #endif
 
+/**
+* Free block structure for free lists - header + pointers to next and previous blocks
+*/
+typedef struct free_item_struct free_item_t;
+struct free_item_struct {
+	heap_header_t header;
+	free_item_t *prev_block; // Previous block in the segregated list
+	free_item_t *next_block; // Next block in the segregated list
+} __PACKED;
+/**
+* Free block structure for search tree - header + pointers to next and previous blocks
+*/
+typedef struct free_node_struct free_node_t;
+struct free_node_struct {
+	heap_header_t header;
+	free_node_t *smaller_block; // Smaller block in the sorted list
+	free_node_t *larger_block; // Larger block in the sorted list
+	free_node_t *child_block; // Equaly sized child block
+	free_node_t *parent_block; // Parent block of equaly sized child
+} __PACKED;
+
 // Magic number used in heap blocks for sanity checks
 #define HEAP_MAGIC 0xFFFFC0CAC01AFFFF
 // Heap block header and footer size
@@ -144,27 +165,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HEAP_SET_USED(h, u) (((heap_size_t *)&h->size)->used = u)
 
 /**
-* Free block structure for free lists - header + pointers to next and previous blocks
-*/
-typedef struct free_item_struct free_item_t;
-struct free_item_struct {
-	heap_header_t header;
-	free_item_t *prev_block; // Previous block in the segregated list
-	free_item_t *next_block; // Next block in the segregated list
-} __PACKED;
-/**
-* Free block structure for search tree - header + pointers to next and previous blocks
-*/
-typedef struct free_node_struct free_node_t;
-struct free_node_struct {
-	heap_header_t header;
-	free_node_t *smaller_block; // Smaller block in the sorted list
-	free_node_t *larger_block; // Larger block in the sorted list
-	free_node_t *child_block; // Equaly sized child block
-	free_node_t *parent_block; // Parent block of equaly sized child
-} __PACKED;
-
-/**
 * Create a heap block. Write header and footer information.
 * @param ptr - free memory location on which to build a heap block
 * @param psize - payload size
@@ -218,17 +218,18 @@ static heap_header_t *heap_split_block(heap_header_t *block, uint64 psize){
 static bool heap_tree_insert(free_node_t **tree, heap_header_t *block){
 	if (HEAP_GET_USIZE(block) > HEAP_OVERHEAD + HEAP_TREE_DATA_SIZE){
 		free_node_t *free_block = (free_node_t *)block;
+		// Clear pointers
+		free_block->parent_block = 0;
+		free_block->child_block = 0;
+		free_block->smaller_block = 0;
+		free_block->larger_block = 0;
 		if ((*tree) == 0){
 			// As easy as it can be
 			(*tree) = free_block;
-			(*tree)->parent_block = 0;
-			(*tree)->child_block = 0;
-			(*tree)->smaller_block = 0;
-			(*tree)->larger_block = 0;
 			return true;
 		} else {
 			uint64 usize = HEAP_GET_USIZE(free_block);
-			free_node_t *block = (*tree);
+			free_node_t *parent_block = (*tree);
 			free_node_t *parent_prev = 0;
 			uint64 block_usize;
 			bool set = false;
@@ -236,65 +237,51 @@ static bool heap_tree_insert(free_node_t **tree, heap_header_t *block){
 				block_usize = HEAP_GET_USIZE(block);
 				if (block_usize > usize){
 					// Smaller than selected
-					if (block->smaller_block == 0){
+					if (parent_block->smaller_block == 0){
 						// No more where to go - store here
-						block->smaller_block = free_block;
-						free_block->larger_block = block;
-						free_block->parent_block = 0;
-						free_block->child_block = 0;
+						parent_block->smaller_block = free_block;
+						free_block->larger_block = parent_block;
 						return true;
-					} else if (HEAP_GET_USIZE(block->smaller_block) < usize){
+					} else if (HEAP_GET_USIZE(parent_block->smaller_block) < usize){
 						// Insert inbetween if the next one is smaller
-						free_block->smaller_block = block->smaller_block;
-						block->smaller_block->larger_block = free_block;
-						block->smaller_block = free_block;
-						free_block->larger_block = block;
-						free_block->parent_block = 0;
-						free_block->child_block = 0;
+						free_block->smaller_block = parent_block->smaller_block;
+						parent_block->smaller_block->larger_block = free_block;
+						parent_block->smaller_block = free_block;
+						free_block->larger_block = parent_block;
 						return true;
 					}
 					// Move to next smaller block
-					block = block->smaller_block;
+					parent_block = parent_block->smaller_block;
 				} else if (block_usize < usize){
 					// Larger than selected
-					if (block->larger_block == 0){
+					if (parent_block->larger_block == 0){
 						// No more where to go - store here
-						free_block->larger_block = 0;
-						block->larger_block = free_block;
-						free_block->smaller_block = block;
-						free_block->parent_block = 0;
-						free_block->child_block = 0;
+						parent_block->larger_block = free_block;
+						free_block->smaller_block = parent_block;
 						return true;
-					} else if (HEAP_GET_USIZE(block->larger_block) > usize){
+					} else if (HEAP_GET_USIZE(parent_block->larger_block) > usize){
 						// Insert inbetween if the next one is larger
-						free_block->larger_block = block->larger_block;
-						block->larger_block->smaller_block = free_block;
-						block->larger_block = free_block;
-						free_block->smaller_block = block;
-						free_block->parent_block = 0;
-						free_block->child_block = 0;
+						free_block->larger_block = parent_block->larger_block;
+						parent_block->larger_block->smaller_block = free_block;
+						parent_block->larger_block = free_block;
+						free_block->smaller_block = parent_block;
 						return true;
 					}
 					// Move to next larger block
-					block = block->larger_block;
+					parent_block = parent_block->larger_block;
 				} else {
 					// Equal in size - push into a child list
-					if (block->child_block == 0){
+					if (parent_block->child_block == 0){
 						// Parent has no equal block stored
-						block->child_block = free_block;
-						free_block->parent_block = block;
-						free_block->child_block = 0;
-						free_block->smaller_block = 0;
-						free_block->larger_block = 0;
+						parent_block->child_block = free_block;
+						free_block->parent_block = parent_block;
 						return true;
 					} else {
-						// Insert before the last child
-						block->child_block->parent_block = free_block;
-						free_block->child_block = block->child_block;
-						block->child_block = free_block;
-						free_block->parent_block = block;
-						free_block->smaller_block = 0;
-						free_block->larger_block = 0;
+						// Push before the last child
+						parent_block->child_block->parent_block = free_block;
+						free_block->child_block = parent_block->child_block;
+						parent_block->child_block = free_block;
+						free_block->parent_block = parent_block;
 						return true;
 					}
 				}
@@ -314,9 +301,9 @@ static void heap_tree_delete(free_node_t **tree, heap_header_t *block){
 		// This is a child item
 		// Simply remove this block from it's parent
 		// There should never be any larger or smaller blocks for childs
-		free_block->parent_block->child_block = 0;
+		free_block->parent_block->child_block = free_block->child_block;
 	} else {
-		free_node_t *replacement;
+		free_node_t *replacement = 0;
 		if (free_block->child_block != 0){
 			// We have an equal child, just copy branches and move on
 			if (free_block->larger_block != 0){
@@ -352,6 +339,11 @@ static void heap_tree_delete(free_node_t **tree, heap_header_t *block){
 			(*tree) = replacement;
 		}
 	}
+	// Clear pointers
+	free_block->child_block = 0;
+	free_block->parent_block = 0;
+	free_block->larger_block = 0;
+	free_block->smaller_block = 0;
 }
 /**
 * Search for a free block that matches size and alignament criteria
@@ -449,6 +441,7 @@ static bool heap_list_push(free_item_t **list, heap_header_t *block){
 	free_item_t *free_block = (free_item_t *)block;
 	if (list_idx >= 0){
 		// Add to the list
+		free_block->prev_block = 0;
 		free_block->next_block = list[list_idx];
 		if (free_block->next_block != 0){
 			free_block->next_block->prev_block = free_block;
@@ -459,12 +452,12 @@ static bool heap_list_push(free_item_t **list, heap_header_t *block){
 	return false;
 }
 /**
-* Remove a free block from a the segregated list
+* Delete a free block from the segregated list
 * @param heap - pointer to the free lists
 * @param bloc - block to remove
 * @return true on success
 */
-static bool heap_list_pop(free_item_t **list, heap_header_t *block){
+static bool heap_list_delete(free_item_t **list, heap_header_t *block){
 	uint64 usize = HEAP_GET_USIZE(block);
 	uint64 psize = usize - HEAP_OVERHEAD;
 	int8 list_idx = HEAP_SIZE_IDX(psize);
@@ -489,6 +482,9 @@ static bool heap_list_pop(free_item_t **list, heap_header_t *block){
 				free_block->prev_block->next_block = 0;
 			}
 		}
+		// Clear pointers
+		free_block->next_block = 0;
+		free_block->prev_block = 0;
 		return true;
 	}
 	return false;
@@ -551,7 +547,7 @@ static heap_header_t * heap_merge_left(heap_t *heap, heap_header_t *block){
 			// Merge left
 			heap_header_t *free_left = (heap_header_t *)HEAP_GET_HEADER(prev_footer);
 			// Remove the right block
-			if (!heap_list_pop((free_item_t **)heap->free_list, free_left)){
+			if (!heap_list_delete((free_item_t **)heap->free_list, free_left)){
 				heap_tree_delete((free_node_t **)&heap->free_tree, free_left);
 			}
 			// Create new block
@@ -574,7 +570,7 @@ static void heap_merge_right(heap_t *heap, heap_header_t *block){
 			// Merge left
 			heap_header_t *free_right = (heap_header_t *)next_header;
 			// Remove the right block
-			if (!heap_list_pop((free_item_t **)heap->free_list, free_right)){
+			if (!heap_list_delete((free_item_t **)heap->free_list, free_right)){
 				heap_tree_delete((free_node_t **)&heap->free_tree, free_right);
 			}
 			// Create new block
@@ -594,14 +590,13 @@ static heap_header_t * heap_extend(heap_t *heap, uint64 psize){
 	uint64 page_size = PAGE_SIZE_ALIGN(usize);
 	heap_header_t *block = (heap_header_t *)(heap->end_addr);
 	
-	// Allocate pages
-	while (page_size > 0){
-		heap->end_addr += PAGE_SIZE;
-		page_size -= PAGE_SIZE;
+	uint64 alloc_size = page_alloc(heap->end_addr, page_size);
+	if (alloc_size > 0){
+		heap->end_addr += alloc_size;
 	}
 
 	// Create a new free block
-	heap_create_block(block, usize - HEAP_OVERHEAD);
+	heap_create_block(block, page_size - HEAP_OVERHEAD);
 	// Try to merge with the last one
 	block = heap_merge_left(heap, block);
 	
@@ -649,7 +644,7 @@ void *heap_alloc(heap_t * heap, uint64 psize, bool align){
 		free_block = heap_extend(heap, psize);
 	} else {
 		// Remove block
-		if (!heap_list_pop((free_item_t **)heap->free_list, free_block)){
+		if (!heap_list_delete((free_item_t **)heap->free_list, free_block)){
 			heap_tree_delete((free_node_t **)&heap->free_tree, free_block);
 		}
 	}
@@ -676,8 +671,6 @@ void *heap_alloc(heap_t * heap, uint64 psize, bool align){
 		}
 		if (free_other != 0){
 			// If there are left overs - add them to list or a tree
-			debug_print(DC_WB, "Leftover @%x", (uint64)free_other);
-			BREAK();
 			if (!heap_list_push((free_item_t **)heap->free_list, free_other)){
 				heap_tree_insert((free_node_t **)&heap->free_tree, free_other);
 			}

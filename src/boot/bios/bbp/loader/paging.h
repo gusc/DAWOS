@@ -74,13 +74,7 @@ uint64 page_total_mem();
 * @return RAM size in bytes
 */
 uint64 page_available_mem();
-/**
-* Normalize virtual address to canonical form
-* Usefull when converting from 32bit addresses to 64bit
-* @param vaddr - virtual address to normalize
-* @return normalized virtual address
-*/
-uint64 page_normalize_vaddr(uint64 vaddr);
+
 /**
 * Map a physical address to virtual address
 * @param paddr - physical address to map
@@ -88,6 +82,12 @@ uint64 page_normalize_vaddr(uint64 vaddr);
 * @return true on success, false if virtual address is already taken
 */
 bool page_map(uint64 paddr, uint64 vaddr);
+/**
+* Release the free address
+* @param vaddr - virtual address to release
+* @return true on success, false if virtual address was not mapped
+*/
+bool page_release(uint64 vaddr);
 /**
 * Identity map a physical address for memory maped IO (no cache!)
 * @param paddr - physical address to map
@@ -105,12 +105,12 @@ uint64 page_resolve(uint64 vaddr);
 * Allocate a new page
 * @return virtual address
 */
-uint64 page_alloc();
+uint64 page_alloc(uint64 vaddr, uint64 size);
 /**
 * Free the page mapped to virtual address
 * @param vaddr - virtual address to free
 */
-void page_free(uint64 vaddr);
+void page_free(uint64 vaddr, uint64 size);
 /**
 * Get the current physical address of PML4
 * @return physical address of PML4
