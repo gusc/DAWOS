@@ -280,83 +280,70 @@ static void page_create_block(void *ptr, uint64 size){
 static bool page_tree_insert(page_header_t *block){
 	if (block->size / PAGE_SIZE > PAGE_LIST_MAX){
 		free_node_t *free_block = (free_node_t *)block;
+		// Clear pointers
+		free_block->parent_block = 0;
+		free_block->child_block = 0;
+		free_block->smaller_block = 0;
+		free_block->larger_block = 0;
 		if (_page_tree == 0){
 			// As easy as it can be
 			_page_tree = free_block;
-			_page_tree->parent_block = 0;
-			_page_tree->child_block = 0;
-			_page_tree->smaller_block = 0;
-			_page_tree->larger_block = 0;
 			return true;
 		} else {
 			uint64 usize = free_block->header.size;
-			free_node_t *block = _page_tree;
+			free_node_t *parent_block = _page_tree;
 			free_node_t *parent_prev = 0;
 			uint64 block_usize;
 			bool set = false;
 			while (!set){
-				block_usize = block->header.size;
+				block_usize = parent_block->header.size;
 				if (block_usize > usize){
 					// Smaller than selected
-					if (block->smaller_block == 0){
+					if (parent_block->smaller_block == 0){
 						// No more where to go - store here
-						block->smaller_block = free_block;
-						free_block->larger_block = block;
-						free_block->parent_block = 0;
-						free_block->child_block = 0;
+						parent_block->smaller_block = free_block;
+						free_block->larger_block = parent_block;
 						return true;
-					} else if (block->smaller_block->header.size < usize){
+					} else if (parent_block->smaller_block->header.size < usize){
 						// Insert inbetween if the next one is smaller
-						free_block->smaller_block = block->smaller_block;
-						block->smaller_block->larger_block = free_block;
-						block->smaller_block = free_block;
-						free_block->larger_block = block;
-						free_block->parent_block = 0;
-						free_block->child_block = 0;
+						free_block->smaller_block = parent_block->smaller_block;
+						parent_block->smaller_block->larger_block = free_block;
+						parent_block->smaller_block = free_block;
+						free_block->larger_block = parent_block;
 						return true;
 					}
 					// Move to next smaller block
-					block = block->smaller_block;
+					parent_block = parent_block->smaller_block;
 				} else if (block_usize < usize){
 					// Larger than selected
-					if (block->larger_block == 0){
+					if (parent_block->larger_block == 0){
 						// No more where to go - store here
-						free_block->larger_block = 0;
-						block->larger_block = free_block;
-						free_block->smaller_block = block;
-						free_block->parent_block = 0;
-						free_block->child_block = 0;
+						parent_block->larger_block = free_block;
+						free_block->smaller_block = parent_block;
 						return true;
-					} else if (block->larger_block->header.size > usize){
+					} else if (parent_block->larger_block->header.size > usize){
 						// Insert inbetween if the next one is larger
-						free_block->larger_block = block->larger_block;
-						block->larger_block->smaller_block = free_block;
-						block->larger_block = free_block;
-						free_block->smaller_block = block;
-						free_block->parent_block = 0;
-						free_block->child_block = 0;
+						free_block->larger_block = parent_block->larger_block;
+						parent_block->larger_block->smaller_block = free_block;
+						parent_block->larger_block = free_block;
+						free_block->smaller_block = parent_block;
 						return true;
 					}
 					// Move to next larger block
-					block = block->larger_block;
+					parent_block = parent_block->larger_block;
 				} else {
 					// Equal in size - push into a child list
-					if (block->child_block == 0){
+					if (parent_block->child_block == 0){
 						// Parent has no equal block stored
-						block->child_block = free_block;
-						free_block->parent_block = block;
-						free_block->child_block = 0;
-						free_block->smaller_block = 0;
-						free_block->larger_block = 0;
+						parent_block->child_block = free_block;
+						free_block->parent_block = parent_block;
 						return true;
 					} else {
 						// Insert before the last child
-						block->child_block->parent_block = free_block;
-						free_block->child_block = block->child_block;
-						block->child_block = free_block;
-						free_block->parent_block = block;
-						free_block->smaller_block = 0;
-						free_block->larger_block = 0;
+						parent_block->child_block->parent_block = free_block;
+						free_block->child_block = parent_block->child_block;
+						parent_block->child_block = free_block;
+						free_block->parent_block = parent_block;
 						return true;
 					}
 				}
@@ -413,6 +400,11 @@ static void page_tree_delete(page_header_t *block){
 			_page_tree = replacement;
 		}
 	}
+	// Clear pointers
+	free_block->parent_block = 0;
+	free_block->child_block = 0;
+	free_block->larger_block = 0;
+	free_block->smaller_block = 0;
 }
 /**
 * Search for a free block that matches size and alignament criteria
@@ -488,6 +480,9 @@ static bool page_list_delete(page_header_t *block){
 				free_block->prev_block->next_block = 0;
 			}
 		}
+		// Clear pointers
+		free_block->next_block = 0;
+		free_block->prev_block = 0;
 		return true;
 	}
 	return false;
