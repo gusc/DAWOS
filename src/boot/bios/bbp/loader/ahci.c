@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "lib.h"
 #include "pci.h"
 #include "paging.h"
+#include "memory.h"
 #include "ahci.h"
 #if DEBUG == 1
 	#include "debug_print.h"
@@ -420,7 +421,7 @@ typedef volatile struct {
 	uint8 port;
 } ahci_dev_t;
 
-static ahci_dev_t _ahci_dev[256];
+static ahci_dev_t *_ahci_dev;
 static uint64 _ahci_dev_count = 0;
 
 // Check device type
@@ -488,6 +489,8 @@ bool ahci_init(){
 	uint8 dev_count = 0;
 	ahci_hba_t *hba;
 	pci_device_t dev;
+
+	_ahci_dev = (ahci_dev_t *)mem_alloc(sizeof(ahci_dev_t) * 256);
 
 	dev_count = pci_num_device(0x1, 0x6);
 	if (dev_count > 0){

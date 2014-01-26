@@ -81,59 +81,16 @@ void main64(){
 	page_init();
 	// Initialize kernel heap allocator
 	mem_init_heap(HEAP_MAX_SIZE);
-	
-#if DEBUG == 1
-	mem_list();
-
-	uint64 addr1 = (uint64)mem_alloc(32);
-	debug_print(DC_WB, "Allocate 32 bytes @%x", addr1);
-
-	uint64 addr2 = (uint64)mem_alloc(32);
-	debug_print(DC_WB, "Allocate 32 bytes @%x", addr2);
-
-	debug_print(DC_WB, "Deallocate @%x", addr1);
-	mem_free((void *)addr1);
-
-	debug_print(DC_WB, "Deallocate @%x", addr2);
-	mem_free((void *)addr2);	
-
-	uint64 addr = (uint64)mem_alloc_align(64);
-	debug_print(DC_WB, "Allocate 64 bytes page aligned @%x", addr);
-
-	debug_print(DC_WB, "Deallocate @%x", addr);
-	mem_free((void *)addr);
-
-	uint64 addrm = (uint64)mem_alloc_align(1024 * 1024);
-	debug_print(DC_WB, "Allocate 1MB page aligned @%x", addrm);
-
-	uint64 addrm2 = (uint64)mem_alloc(1024 * 1024);
-	debug_print(DC_WB, "Allocate 1MB @%x", addrm2);
-
-	addr = (uint64)mem_alloc(3900);
-	debug_print(DC_WB, "Allocate 3900b @%x", addr);
-
-	debug_print(DC_WB, "Deallocate @%x", addrm);
-	mem_free((void *)addrm);
-
-	debug_print(DC_WB, "Deallocate @%x", addrm2);
-	mem_free((void *)addrm2);
-
-	debug_print(DC_WB, "Deallocate @%x", addr);
-	mem_free((void *)addr);
-
-	mem_list();
-#endif
-
 	// Initialize PCI
 	pci_init();
 #if DEBUG == 1
-	//pci_list();
+	pci_list();
 #endif
 
 	// Initialize AHCI
-	//if (ahci_init()){
-
-	//}
+	if (ahci_init()){
+		
+	}
 	
 #if DEBUG == 1
 	debug_print(DC_WB, "Done");

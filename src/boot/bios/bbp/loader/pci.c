@@ -38,6 +38,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "lib.h"
 #include "io.h"
 #include "pci.h"
+#include "paging.h"
+#include "memory.h"
 #if DEBUG == 1
 	#include "debug_print.h"
 #endif
@@ -68,7 +70,7 @@ static uint32 pci_get_addr(uint16 bus, uint8 device, uint8 function, uint8 reg){
 */
 
 // Local PCI device cache
-static pci_cache_t _cache[256];
+static pci_cache_t *_cache;
 static uint8 _cache_len = 0;
 
 /**
@@ -112,6 +114,9 @@ void pci_init(){
 	pci_header_t header;
 	pci_addr_t addr;
 	addr.raw = 0x80000000;
+
+	_cache = (pci_cache_t *)mem_alloc(sizeof(pci_cache_t *) * 256);
+
 	// Recursive scan - thanks OSDev Wiki
 	pci_get_header(&header, addr);
 	if ((header.type & 0x80) != 0){
@@ -186,18 +191,6 @@ void pci_write(pci_addr_t addr, uint32 data){
 	outd(PCI_CONFIG_ADDRESS, addr.raw);
 	outd(PCI_CONFIG_DATA, data);
 }
-
-/*uint32 pci_read(uint32 addr){
-	uint32 data;
-	asm volatile ("outl %%eax, %%dx" : : "d"(PCI_CONFIG_ADDRESS), "a"(addr));
-	asm volatile("inl %%dx, %%eax" : "=a"(data) : "d"(PCI_CONFIG_DATA));
-	return data;
-}
-
-void pci_write(uint32 addr, uint32 data){
-	asm volatile ("outl %%eax, %%dx" : : "d"(PCI_CONFIG_ADDRESS), "a"(addr));
-	asm volatile ("outl %%eax, %%dx" : : "d"(PCI_CONFIG_DATA), "a"(data));
-}*/
 
 static void pci_enum_bus(uint16 bus){
 	uint8 device = 0;
