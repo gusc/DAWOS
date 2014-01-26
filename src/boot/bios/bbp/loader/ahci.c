@@ -195,7 +195,7 @@ typedef volatile struct {
 	} fbs;
 	uint32 reserved2[11];
 	uint32 vendor[4];			// Vendor specific
-} ahci_port_t; // 128 bytes
+} __PACKED ahci_port_t; // 128 bytes
 /**
 * HBA structure
 */
@@ -289,7 +289,7 @@ typedef volatile struct {
 	// 256 bytes
  	ahci_port_t ports[1];		// Port control registers
 	// Up to 4096 bytes (depending on port count)
-} ahci_hba_t;
+} __PACKED ahci_hba_t;
 
 typedef volatile struct {
 	uint8 fis_type;				// FIS_TYPE_REG_H2D
@@ -503,7 +503,7 @@ bool ahci_init(){
 				// Get AHCI controller configuration
 				pci_get_config(&dev, addr);
 				// Get ABAR (AHCI Base Address)
-				abar = (uint64)dev.bar[5];
+				abar = ((uint64)dev.bar[5]) & 0xFFFFFFFFFFFFC000;
 				// Map the page
 				page_map_mmio(abar, abar);
 				hba = (ahci_hba_t *)abar;
