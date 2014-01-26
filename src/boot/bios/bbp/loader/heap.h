@@ -54,6 +54,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "common.h"
 
+// Minimum free block size listed in segregated lists in bytes (16 is a minumum on 64bit systems, 
+// as we have to store 2 pointers in free list blocks, each 8 bytes)
+// TODO: There's a bug if we increase this to 32 - something wrong with alignament calculations - must fix
+#define HEAP_LIST_MIN 16
+// Maximum free block size listed in segregated lists in bytes (larger ones go to a search tree)
+#define HEAP_LIST_MAX 1024
+
 // Align to 16 byte boundary
 #define HEAP_IMASK (HEAP_LIST_MIN - 1) // 15
 #define HEAP_MASK  (~HEAP_IMASK) // -16
@@ -100,8 +107,7 @@ struct heap_struct {
 	uint64 start_addr;							// Start address of the heap
 	uint64 end_addr;							// End address of the heap
 	uint64 max_addr;							// Maximum address of the heap
-	heap_header_t *free_list[HEAP_LIST_COUNT];	// Free block segregated list
-	heap_header_t *free_tree;					// Free block sorted list
+	heap_header_t *free[HEAP_LIST_COUNT + 1];	// Free block list + tree in the last item
 } __ALIGN(16);
 typedef struct heap_struct heap_t;
 

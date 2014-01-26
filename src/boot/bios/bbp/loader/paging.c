@@ -406,38 +406,12 @@ static void page_tree_delete(page_header_t *block){
 	free_block->larger_block = 0;
 	free_block->smaller_block = 0;
 }
-/**
-* Search for a free block that matches size and alignament criteria
-* @param size - block size
-* @return a pointer to page block header
-*/
-static page_header_t *page_tree_search(uint64 size){
-	free_node_t *free_block = _page_tree;
-
-	// Move our search pointer to the first suitable entry
-	if (free_block->header.size < size){
-		while (free_block != 0 && free_block->header.size < size){
-			free_block = free_block->larger_block;
-		}
-	} else if (free_block->header.size > size) {
-		while (free_block->header.size > size){
-			if (free_block->smaller_block != 0 && free_block->smaller_block->header.size >= size){
-				free_block = free_block->smaller_block;
-			} else {
-				break;
-			}
-		}
-	}
-	// We might have found something for an unaligned request (it might be 0 too)
-	return (page_header_t *)free_block;
-}
 
 /**
 * Push a free block to the segregated list
 * @param block - block to add
-* @return true on success, false if the block was too large for free lists
 */
-static bool page_list_push(page_header_t *block){
+static void page_free_insert(page_header_t *block){
 	int8 list_idx = PAGE_SIZE_IDX(block->size);
 	free_item_t *free_block = (free_item_t *)block;
 	if (list_idx >= 0){
@@ -448,16 +422,16 @@ static bool page_list_push(page_header_t *block){
 			free_block->next_block->prev_block = free_block;
 		}
 		_page_list[list_idx] = free_block;
-		return true;
+	} else {
+		// Not suitable for the list - insert into a tree
+		page_tree_insert(block);
 	}
-	return false;
 }
 /**
 * Delete a free block from the segregated list
 * @param bloc - block to remove
-* @return true on success
 */
-static bool page_list_delete(page_header_t *block){
+static void page_free_remove(page_header_t *block){
 	int8 list_idx = PAGE_SIZE_IDX(block->size);
 	free_item_t *free_block = (free_item_t *)block;
 	if (list_idx >= 0){
@@ -483,9 +457,10 @@ static bool page_list_delete(page_header_t *block){
 		// Clear pointers
 		free_block->next_block = 0;
 		free_block->prev_block = 0;
-		return true;
+	} else {
+		// Not in any of the lists - try to remove from the tree
+		page_tree_delete(block);
 	}
-	return false;
 }
 /**
 * Find a free list in the free block list
@@ -493,7 +468,7 @@ static bool page_list_delete(page_header_t *block){
 * @param size - block size
 * @return a free block
 */
-static page_header_t *page_list_search(uint64 size){
+static page_header_t *page_free_search(uint64 size){
 	int8 list_idx = PAGE_SIZE_IDX(size);
 	if (list_idx >= 0){
 		while (list_idx < PAGE_LIST_COUNT){
@@ -505,7 +480,25 @@ static page_header_t *page_list_search(uint64 size){
 			list_idx ++;
 		}
 	}
-	return 0;
+
+	// Couldn't find in the list - search in the tree
+	free_node_t *free_block = _page_tree;
+	// Move our search pointer to the first suitable entry
+	if (free_block->header.size < size){
+		while (free_block != 0 && free_block->header.size < size){
+			free_block = free_block->larger_block;
+		}
+	} else if (free_block->header.size > size) {
+		while (free_block->header.size > size){
+			if (free_block->smaller_block != 0 && free_block->smaller_block->header.size >= size){
+				free_block = free_block->smaller_block;
+			} else {
+				break;
+			}
+		}
+	}
+	// We might have found something for an unaligned request (it might be 0 too)
+	return (page_header_t *)free_block;
 }
 /**
 * Merge block to the left
@@ -519,9 +512,7 @@ static page_header_t * page_merge_left(page_header_t *block){
 			// Merge left
 			page_header_t *free_left = (page_header_t *)PAGE_GET_HEADER(prev_footer);
 			// Remove the right block
-			if (!page_list_delete(free_left)){
-				page_tree_delete(free_left);
-			}
+			page_free_remove(free_left);
 			// Create new block
 			page_create_block(free_left, free_left->size + block->size);
 			// Add block to heap free lists of tree
@@ -542,9 +533,7 @@ static void page_merge_right(page_header_t *block){
 			// Merge left
 			page_header_t *free_right = (page_header_t *)next_header;
 			// Remove the right block
-			if (!page_list_delete(free_right)){
-				page_tree_delete(free_right);
-			}
+			page_free_remove(free_right);
 			// Create new block
 			page_create_block(block, block->size + free_right->size);
 		}
@@ -587,9 +576,7 @@ void page_init(uint64 ammount){
 				}
 				uint64 size = mem_map->entries[i].length - (start - mem_map->entries[i].base);
 				page_create_block((void *)start, size);
-				if (!page_list_push((page_header_t *)start)){
-					page_tree_insert((page_header_t *)start);
-				}
+				page_free_insert((page_header_t *)start);
 			}
 		}
 #if DEBUG == 1
@@ -725,16 +712,15 @@ uint64 page_alloc(uint64 vaddr, uint64 size){
 		}
 	}
 
-	page_header_t *pages = page_list_search(size);
-	if (pages == 0){
-		pages = page_tree_search(size);
-	}
+	page_header_t *pages = page_free_search(size);
+	if (pages != 0){
+		if (pages->size > size){
+			//page_split
+		}
 
-	if (pages->size > size){
-		//page_split
+		return size;
 	}
-
-	return size;
+	return 0;
 }
 void page_free(uint64 vaddr, uint64 size){
 	/*pm_t *table = (pm_t *)page_get_pml4();
