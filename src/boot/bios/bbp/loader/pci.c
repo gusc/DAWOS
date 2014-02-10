@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "lib.h"
 #include "io.h"
 #include "pci.h"
-#include "paging.h"
 #include "memory.h"
 #if DEBUG == 1
 	#include "debug_print.h"
@@ -56,7 +55,7 @@ typedef struct {
 	uint8 subclass_id;
 	uint8 prog_if;
 	uint8 type;
-} pci_cache_t;
+} __PACKED pci_cache_t;
 
 /*
 static uint32 pci_get_addr(uint16 bus, uint8 device, uint8 function, uint8 reg){

@@ -50,6 +50,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AHCI_DEV_SEMB	0xC33C0101	// Enclosure management bridge
 #define AHCI_DEV_PM		0x96690101	// Port multiplier
 
+#define AHCI_HBA_MASK 0xFFFFFFFFFFFFE000
+#define AHCI_HBA_SIZE 8192 // 16KB
+
 // AHCI Specification 1.3 data structures
 
 /**
@@ -288,7 +291,7 @@ typedef volatile struct {
  	uint8 vendor[96];			// Vendor specific registers
 	// 256 bytes
  	ahci_port_t ports[1];		// Port control registers
-	// Up to 4096 bytes (depending on port count)
+	// Up to 4352 bytes (depending on port count)
 } __PACKED ahci_hba_t;
 
 typedef volatile struct {
@@ -451,21 +454,23 @@ static void ahci_init_port(ahci_hba_t *hba){
 #if DEBUG == 1
 			switch (dev_type){
 				case AHCI_DEV_SATA:
-					debug_print(DC_WGR, "SATAPI drive found at port %d\n", i);
+					debug_print(DC_WGR, "SATA drive found at port %d", i);
 					break;
 				case AHCI_DEV_SATAPI:
-					debug_print(DC_WGR, "SATAPI drive found at port %d\n", i);
+					debug_print(DC_WGR, "SATAPI drive found at port %d", i);
 					break;
 				case AHCI_DEV_SEMB:
-					debug_print(DC_WGR, "SEMB drive found at port %d\n", i);
+					debug_print(DC_WGR, "SEMB drive found at port %d", i);
 					break;
 				case AHCI_DEV_PM:
-					debug_print(DC_WGR, "PM drive found at port %d\n", i);
+					debug_print(DC_WGR, "PM drive found at port %d", i);
 					break;
 				default:
-					debug_print(DC_WGR, "Unknown at port %d\n", i);
+					debug_print(DC_WGR, "Unknown at port %d, %x", i, (uint64)dev_type);
 					break;
 			}
+			debug_print(DC_WGR, "     FIS base @0x%x", hba->ports[i].fb);
+			debug_print(DC_WGR, "     CL base  @0x%x", hba->ports[i].clb);
 #endif
 			switch (dev_type){
 				case AHCI_DEV_SATA:
@@ -479,40 +484,41 @@ static void ahci_init_port(ahci_hba_t *hba){
 			}
 		}
 		ports >>= 1;
-		i ++;
 	}
 }
 
 bool ahci_init(){
 	uint64 abar = 0;
 	uint8 i = 0;
+	uint64 offset = 0;
 	uint8 dev_count = 0;
 	ahci_hba_t *hba;
-	pci_device_t dev;
-
+	pci_device_t *dev = (pci_device_t *)mem_alloc(sizeof(pci_device_t));
 	_ahci_dev = (ahci_dev_t *)mem_alloc(sizeof(ahci_dev_t) * 256);
 
 	dev_count = pci_num_device(0x1, 0x6);
 	if (dev_count > 0){
 #if DEBUG == 1
-		debug_print(DC_WB, "SATA Controller count: %d", dev_count);
+		debug_print(DC_WB, "SATA Controller count: %d", (uint64)dev_count);
 #endif
 		for (i = 0; i < dev_count; i ++){
 			pci_addr_t addr = pci_get_device(0x1, 0x6, i);
 			if (addr.raw != 0){
 				// Get AHCI controller configuration
-				pci_get_config(&dev, addr);
+				pci_get_config(dev, addr);
 				// Get ABAR (AHCI Base Address)
-				abar = ((uint64)dev.bar[5]) & 0xFFFFFFFFFFFFC000;
+				abar = ((uint64)(dev->bar[5])) & AHCI_HBA_MASK;
 				// Map the page
-				page_map_mmio(abar, abar);
+				for (offset = 0; offset < AHCI_HBA_SIZE; offset += PAGE_SIZE){
+					page_map_mmio(abar + offset, abar + offset);
+				}
 				hba = (ahci_hba_t *)abar;
 #if DEBUG == 1
 				debug_print(DC_WB, "SATA controller at %u:%u", addr.s.bus, addr.s.device);
-				debug_print(DC_WB, "     BAR:0x%x", abar);
-				debug_print(DC_WB, "     Num Ports:%d", hba->cap.np);
-				debug_print(DC_WB, "     Num Commands:%d", hba->cap.ncs);
-				debug_print(DC_WB, "     64-bit addresing:%d", hba->cap.s64a);
+				debug_print(DC_WB, "     ABAR:0x%x", abar);
+				debug_print(DC_WB, "     Num Ports:%d", hba->cap.np + 1);
+				debug_print(DC_WB, "     Num Commands:%d", hba->cap.ncs + 1);
+				debug_print(DC_WB, "     64-bit addresing:%s", hba->cap.s64a == 1 ? "Yes" : "No");
 				debug_print(DC_WB, "     Version:%x", hba->vs);
 #endif
 				ahci_init_port(hba);

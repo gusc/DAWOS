@@ -62,7 +62,7 @@ typedef union {
 		uint32 enabled	: 1; // Enabled bit
 	} s;
 	uint32 raw;
-} pci_addr_t;
+} __PACKED pci_addr_t;
 /**
 * PCI configuration space header structure
 */
@@ -79,7 +79,7 @@ typedef volatile struct {
 	uint8 latency_timer;
 	uint8 type;
 	uint8 bist;
-} pci_header_t;
+} __PACKED pci_header_t;
 /**
 * Standard PCI device configuration space structure
 */
@@ -96,7 +96,7 @@ typedef volatile struct {
 	uint8 int_pin;
 	uint8 min_grant;
 	uint8 max_latency;
-} pci_device_t;
+} __PACKED pci_device_t;
 
 /**
 * Enumerate PCI bus

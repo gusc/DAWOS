@@ -674,6 +674,7 @@ bool page_id_map(uint64 paddr, uint64 vaddr, bool mmio){
 		}
 		return true;
 	}
+	// Page entry was already present - don't overwrite it
 	return false;
 }
 bool page_release(uint64 vaddr){
