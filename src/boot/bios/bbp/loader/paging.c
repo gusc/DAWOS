@@ -580,7 +580,7 @@ void page_init(uint64 ammount){
 			}
 		}
 #if DEBUG == 1
-		debug_print(DC_WB, "%x - %x (%s)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, types[mem_map->entries[i].type - 1]);
+		//debug_print(DC_WB, "%x - %x (%s)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, types[mem_map->entries[i].type - 1]);
 #endif
 	}
 

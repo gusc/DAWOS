@@ -53,20 +53,26 @@ uint64 ahci_num_dev();
 /**
 * Read data from AHCI drive
 * @param idx - device index in the device list
+* @param addr - start address on the drive
 * @param buff - byte buffer to write into
 * @param len - number of bytes to read
 * @todo implement
 * @return false if read failed
 */
-bool ahci_read(uint64 idx, uint8 *buff, uint64 len);
+bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len);
 /**
 * Write data to AHCI drive
 * @param idx - device index in the device list
+* @param addr - start address on the drive
 * @param buff - byte buffer to read from
 * @param len - number of bytes to write
 * @todo implement
 * @return false if write failed
 */
-bool ahci_write(uint64 idx, uint8 *buff, uint64 len);
+bool ahci_write(uint64 idx, uint64 addr, uint8 *buff, uint64 len);
+
+#if DEBUG == 1
+void ahci_list();
+#endif
 
 #endif

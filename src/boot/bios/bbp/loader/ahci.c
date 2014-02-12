@@ -50,8 +50,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AHCI_DEV_SEMB	0xC33C0101	// Enclosure management bridge
 #define AHCI_DEV_PM		0x96690101	// Port multiplier
 
+// Address masks
 #define AHCI_HBA_MASK 0xFFFFFFFFFFFFE000
-#define AHCI_HBA_SIZE 8192 // 16KB
+#define AHCI_HBA_SIZE 8192 // 8KB
+
+// ATA statuses
+#define ATA_DEV_BUSY 0x80
+#define ATA_DEV_DRQ 0x08
+// ATA commands
+#define ATA_CMD_READ_DMA_EX 0x25
+// FIS types
+#define FIS_TYPE_REG_H2D 0x27
+#define FIS_TYPE_REG_D2H 0x34
+#define FIS_TYPE_DMA_ACTIVATE 0x39
+#define FIS_TYPE_DMA_SETUP 0x41
+#define FIS_TYPE_DATA 0x46
+#define FIS_TYPE_BIST_ACTIVATE 0x58
+#define FIS_TYPE_PIO_SETUP 0x5F
+#define FIS_TYPE_DEV_BITS 0xA1
+#define FIS_TYPE_VENDOR1 0xC7
+#define FIS_TYPE_VENDOR2 0xD4
 
 // AHCI Specification 1.3 data structures
 
@@ -134,7 +152,13 @@ typedef volatile struct {
 	uint32 reserved1;
 	// Task file data
 	struct {
-		uint8 status;
+		struct {
+			uint8 err		:1;
+			uint8 cs		:2;
+			uint8 drq		:1;
+			uint8 cs2		:3;
+			uint8 busy		:1;
+		} status;
 		uint8 error;
 		uint16 reserved;
 	} tfd;
@@ -198,7 +222,7 @@ typedef volatile struct {
 	} fbs;
 	uint32 reserved2[11];
 	uint32 vendor[4];			// Vendor specific
-} __PACKED ahci_port_t; // 128 bytes
+} ahci_port_t; // 128 bytes
 /**
 * HBA structure
 */
@@ -292,11 +316,11 @@ typedef volatile struct {
 	// 256 bytes
  	ahci_port_t ports[1];		// Port control registers
 	// Up to 4352 bytes (depending on port count)
-} __PACKED ahci_hba_t;
+} ahci_hba_t;
 
 typedef volatile struct {
 	uint8 fis_type;				// FIS_TYPE_REG_H2D
-	uint8 pmport			:4;	// Port multiplier
+	uint8 pmport			:4;	// Port multiplier port number
 	uint8 reserved1			:3;
 	uint8 cmd				:1;	// 1: Command, 0: Control
 	uint8 command;				// Command register
@@ -309,16 +333,15 @@ typedef volatile struct {
 	uint8 lba4;					// LBA register, 39:32
 	uint8 lba5;					// LBA register, 47:40
 	uint8 featureh;				// Feature register, 15:8
-	uint8 countl;				// Count register, 7:0
-	uint8 counth;				// Count register, 15:8
+	uint16 count;				// Count register
 	uint8 icc;					// Isochronous command completion
 	uint8 control;				// Control register
 	uint8 reserved2[4];
-} ahci_fis_reg_h2d_t; // 20 bytes
+} fis_reg_h2d_t; // 20 bytes
 
 typedef volatile struct {
 	uint8 fis_type;				// FIS_TYPE_REG_D2H
-	uint8 pmport			:4;	// Port multiplier
+	uint8 pmport			:4;	// Port multiplier port number
 	uint8 reserved1			:2;
 	uint8 interrupt			:1;	// Interrupt bit
 	uint8 reserved2			:1;
@@ -335,19 +358,19 @@ typedef volatile struct {
 	uint8 countl;				// Count register, 7:0
 	uint8 counth;				// Count register, 15:8
 	uint8 reserved4[6];
-} ahci_fis_reg_d2h_t; // 20 bytes
+} fis_reg_d2h_t; // 20 bytes
 
 typedef volatile struct {
 	uint8 fis_type;				// FIS_TYPE_DATA
-	uint8 pmport			:4; // Port multiplier
+	uint8 pmport			:4; // Port multiplier port number
 	uint8 reserved1			:4;	
 	uint8 reserved2[2];
 	uint32 data[1];				// Payload
-} ahci_fis_data_t; // 4+ bytes
+} fis_data_t; // 4+ bytes
 
 typedef volatile struct {
 	uint8 fis_type;				// FIS_TYPE_PIO_SETUP
-	uint8 pmport			:4;	// Port multiplier
+	uint8 pmport			:4;	// Port multiplier port number
 	uint8 reserved1			:1;
 	uint8 direction			:1;	// Data transfer direction, 1 - device to host
 	uint8 interrupt			:1;	// Interrupt bit
@@ -368,11 +391,11 @@ typedef volatile struct {
 	uint8 e_status;				// New value of status register
 	uint16 tc;					// Transfer count
 	uint8 reserved5[2];
-} ahci_fis_pio_t; // 20 bytes
+} fis_pio_t; // 20 bytes
 
 typedef volatile struct {
 	uint8 fis_type;				// FIS_TYPE_DMA_SETUP
- 	uint8 pmport			:4;	// Port multiplier
+ 	uint8 pmport			:4;	// Port multiplier port number
 	uint8 reserved1			:1;
 	uint8 direction			:1;	// Data transfer direction, 1 - device to host
 	uint8 interrupt			:1;	// Interrupt bit
@@ -383,16 +406,17 @@ typedef volatile struct {
 	uint32 dma_buff_offset;		//uint8 offset into buffer. First 2 bits must be 0
 	uint32 trans_count;			//Number of uint8s to transfer. Bit 0 must be 0
 	uint32 reserved4;
-} ahci_fis_dma_t; // 28 bytes
+} fis_dma_t; // 28 bytes
 
+// Received FIS memory layout
 typedef volatile struct {
-	ahci_fis_dma_t dsfis;		// DMA Setup FIS
+	fis_dma_t dsfis;			// DMA Setup FIS
 	uint32 pad1;
-	ahci_fis_pio_t psfis;		// PIO Setup FIS
+	fis_pio_t psfis;			// PIO Setup FIS
 	uint32 pad2[3];
-	ahci_fis_reg_d2h_t rfis;	// Register – Device to Host FIS
+	fis_reg_d2h_t rfis;			// Register – Device to Host FIS
 	uint32 pad3;
-	uint8 sdbfis;		// Set Device Bit FIS
+	uint8 sdbfis;				// Set Device Bit FIS
  	uint8 ufis[64];
  	uint32 reserved[96];
 } ahci_fis_t; // 256 bytes
@@ -418,6 +442,22 @@ typedef volatile struct {
 	// DW4 - 7 (reserved)
 	uint32	reserved[4];
 } ahci_hba_cmd_header_t;
+
+typedef volatile struct {
+	uint64 dba;					// Data base address
+	uint32 reserved1;			// Reserved
+	uint32 dbc				:22;// Byte count, 4M max
+	uint32 reserved2		:9;	// Reserved
+	uint32 i				:1;	// Interrupt on completion
+} ahci_hba_prdt_entry_t;
+
+// Command table
+typedef volatile struct {
+	uint8 cfis[64];				// Command FIS
+ 	uint8 acmd[16];				// ATAPI command, 12 or 16 bytes
+ 	uint8 rsv[48];				// Reserved
+ 	ahci_hba_prdt_entry_t prdt_entry[1];	// Physical region descriptor table entries, 0 ~ 65535
+} ahci_hba_cmd_tbl_t;
 
 typedef volatile struct {
 	ahci_hba_t *hba;
@@ -451,27 +491,6 @@ static void ahci_init_port(ahci_hba_t *hba){
 	for (i = 0; i < 32; i ++){
 		if (ports & 1) {
 			dev_type = ahci_get_type(&hba->ports[i]);
-#if DEBUG == 1
-			switch (dev_type){
-				case AHCI_DEV_SATA:
-					debug_print(DC_WGR, "SATA drive found at port %d", i);
-					break;
-				case AHCI_DEV_SATAPI:
-					debug_print(DC_WGR, "SATAPI drive found at port %d", i);
-					break;
-				case AHCI_DEV_SEMB:
-					debug_print(DC_WGR, "SEMB drive found at port %d", i);
-					break;
-				case AHCI_DEV_PM:
-					debug_print(DC_WGR, "PM drive found at port %d", i);
-					break;
-				default:
-					debug_print(DC_WGR, "Unknown at port %d, %x", i, (uint64)dev_type);
-					break;
-			}
-			debug_print(DC_WGR, "     FIS base @0x%x", hba->ports[i].fb);
-			debug_print(DC_WGR, "     CL base  @0x%x", hba->ports[i].clb);
-#endif
 			switch (dev_type){
 				case AHCI_DEV_SATA:
 				case AHCI_DEV_SATAPI:
@@ -498,9 +517,6 @@ bool ahci_init(){
 
 	dev_count = pci_num_device(0x1, 0x6);
 	if (dev_count > 0){
-#if DEBUG == 1
-		debug_print(DC_WB, "SATA Controller count: %d", (uint64)dev_count);
-#endif
 		for (i = 0; i < dev_count; i ++){
 			pci_addr_t addr = pci_get_device(0x1, 0x6, i);
 			if (addr.raw != 0){
@@ -513,39 +529,162 @@ bool ahci_init(){
 					page_map_mmio(abar + offset, abar + offset);
 				}
 				hba = (ahci_hba_t *)abar;
-#if DEBUG == 1
-				debug_print(DC_WB, "SATA controller at %u:%u", addr.s.bus, addr.s.device);
-				debug_print(DC_WB, "     ABAR:0x%x", abar);
-				debug_print(DC_WB, "     Num Ports:%d", hba->cap.np + 1);
-				debug_print(DC_WB, "     Num Commands:%d", hba->cap.ncs + 1);
-				debug_print(DC_WB, "     64-bit addresing:%s", hba->cap.s64a == 1 ? "Yes" : "No");
-				debug_print(DC_WB, "     Version:%x", hba->vs);
-#endif
-				ahci_init_port(hba);
+				if (hba->cap.s64a == 1){
+					ahci_init_port(hba);
+				}
 			}
 		}
+	}
+	if (_ahci_dev_count > 0){
 		return true;
+	}
+	return false;
+}
+
+static int8 ahci_free_slot(ahci_hba_t *hba, ahci_port_t *port){
+	// If not set in SACT and CI, the slot is free
+	int8 i = 0;
+	uint32 slots = (port->sact | port->ci);
+	for (; i < hba->cap.ncs; i++) { 
+		if ((slots & 1) == 0) {
+			return i;
+		}
+		slots >>= 1;
+	}
+	return -1;
+}
+
+uint64 ahci_num_dev(){
+	return _ahci_dev_count;
+}
+
+bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
+	if (idx < _ahci_dev_count){
+		ahci_hba_t *hba = _ahci_dev[idx].hba;
+		ahci_port_t *port = &hba->ports[_ahci_dev[idx].port];
+		uint64 spin = 0;
+		int8 slot = ahci_free_slot(hba, port);
+		if (slot == -1){
+			return false;
+		}
+
+		ahci_hba_cmd_header_t *cmd = (ahci_hba_cmd_header_t *)port->clb;
+		cmd += slot;
+		cmd->desc.cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32);			// Command FIS size
+		cmd->desc.w = 0;												// Read from device
+		cmd->desc.prdtl = (uint16)((len - 1) / 512) + 1;				// PRDT entries count
+
+		ahci_hba_cmd_tbl_t *tbl = (ahci_hba_cmd_tbl_t *)cmd->ctba;
+		mem_fill((uint8 *)tbl, sizeof(ahci_hba_cmd_tbl_t) + ((cmd->desc.prdtl - 1) * sizeof(ahci_hba_prdt_entry_t)), 0);
+
+		uint64 i = 0;
+		uint64 count = len / 512;
+		// 512 bytes (1 sector) per PRDT
+		for (; i < cmd->desc.prdtl - 1; i ++)
+		{
+			tbl->prdt_entry[i].dba = (uint64)buff;
+			tbl->prdt_entry[i].dbc = 512;	// 8K bytes
+			tbl->prdt_entry[i].i = 1;
+			buff += 512;
+			len -= 512;
+		}
+		// Last entry
+		tbl->prdt_entry[i].dba = (uint64)buff;
+		tbl->prdt_entry[i].dbc = len;		// 512 bytes per sector
+		tbl->prdt_entry[i].i = 1;
+ 
+		// Setup command
+		fis_reg_h2d_t *fis = (fis_reg_h2d_t *)(tbl->cfis);
+		fis->fis_type = FIS_TYPE_REG_H2D;
+		fis->cmd = 1;						// Command
+		fis->command = ATA_CMD_READ_DMA_EX;
+ 
+		fis->lba0 = (uint8)addr;
+		fis->lba1 = (uint8)(addr>>8);
+		fis->lba2 = (uint8)(addr>>16);
+		fis->device = 1 << 6;				// LBA mode
+ 
+		fis->lba3 = (uint8)(addr>>24);
+		fis->lba4 = (uint8)(addr>>32);
+		fis->lba5 = (uint8)(addr>>40);
+ 
+		fis->count = count;
+ 
+		// The below loop waits until the port is no longer busy before issuing a new command
+		while ((port->tfd.status.busy | port->tfd.status.drq) && spin < 1000000) {
+			spin++;
+		}
+		if (spin == 1000000){
+			return false;
+		}
+ 
+		port->ci = 1<<slot;	// Issue command
+ 
+		// Wait for completion
+		while (1) {
+			// In some longer duration reads, it may be helpful to spin on the DPS bit 
+			// in the PxIS port field as well (1 << 5)
+			if ((port->ci & (1 << slot)) == 0) {
+				break;
+			}
+			if (port->is.tfes) {
+				// Task file error
+				return false;
+			}
+		}
+ 
+		// Check again
+		if (port->is.tfes){
+			return false;
+		}
+ 
+		return true;
+	}
+	return false;
+}
+bool ahci_write(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
+	if (idx < _ahci_dev_count){
+		ahci_hba_t *hba = _ahci_dev[idx].hba;
+		ahci_port_t *port = &hba->ports[_ahci_dev[idx].port];
+
+	}
+	return false;
+}
+
 #if DEBUG == 1
-	} else {
-		debug_print(DC_WB, "SATA controller was not found");
+void ahci_list(){
+	uint64 i = 0;
+	/*
+	debug_print(DC_WB, "SATA controller at %u:%u", addr.s.bus, addr.s.device);
+	debug_print(DC_WB, "     ABAR:0x%x", abar);
+	debug_print(DC_WB, "     Num Ports:%d", hba->cap.np + 1);
+	debug_print(DC_WB, "     Num Commands:%d", hba->cap.ncs + 1);
+	debug_print(DC_WB, "     Version:%x", hba->vs);
+	*/
+	ahci_dev_t *dev;
+	uint32 dev_type = 0;
+	for (; i < _ahci_dev_count; i ++){
+		dev = &_ahci_dev[i];
+		dev_type = ahci_get_type(&(dev->hba->ports[dev->port]));
+		switch (dev_type){
+			case AHCI_DEV_SATA:
+				debug_print(DC_WGR, "SATA drive found at port %d", dev->port);
+				break;
+			case AHCI_DEV_SATAPI:
+				debug_print(DC_WGR, "SATAPI drive found at port %d", dev->port);
+				break;
+			case AHCI_DEV_SEMB:
+				debug_print(DC_WGR, "SEMB drive found at port %d", dev->port);
+				break;
+			case AHCI_DEV_PM:
+				debug_print(DC_WGR, "PM drive found at port %d", dev->port);
+				break;
+			default:
+				debug_print(DC_WGR, "Unknown at port %d, %x", dev->port, (uint64)dev_type);
+				break;
+		}
+		debug_print(DC_WGR, "     FIS base @0x%x", dev->hba->ports[dev->port].fb);
+		debug_print(DC_WGR, "     CL base  @0x%x", dev->hba->ports[dev->port].clb);
+	}
+}
 #endif
-	}
-	return false;
-}
-
-bool ahci_read(uint64 idx, uint8 *buff, uint64 len){
-	if (idx < _ahci_dev_count){
-		ahci_hba_t *hba = _ahci_dev[idx].hba;
-		ahci_port_t *port = &hba->ports[_ahci_dev[idx].port];
-
-	}
-	return false;
-}
-bool ahci_write(uint64 idx, uint8 *buff, uint64 len){
-	if (idx < _ahci_dev_count){
-		ahci_hba_t *hba = _ahci_dev[idx].hba;
-		ahci_port_t *port = &hba->ports[_ahci_dev[idx].port];
-
-	}
-	return false;
-}

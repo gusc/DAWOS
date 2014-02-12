@@ -84,12 +84,28 @@ void main64(){
 	// Initialize PCI
 	pci_init();
 #if DEBUG == 1
-	pci_list();
+	//pci_list();
 #endif
 
 	// Initialize AHCI
 	if (ahci_init()){
-		
+#if DEBUG == 1
+		ahci_list();
+#endif
+
+		uint8 *mem = (uint8 *)mem_alloc_clean(512);
+		uint64 dev_count = ahci_num_dev();
+		uint64 y = 0;
+		if (dev_count > 0){
+			if (ahci_read(0, 0, mem, 512)){
+				debug_print(DC_WB, "Read:");
+				for (; y < 64; y += 8){
+					debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
+				}
+			} else {
+				debug_print(DC_WB, "Read failed");
+			}
+		}
 	}
 	
 #if DEBUG == 1
