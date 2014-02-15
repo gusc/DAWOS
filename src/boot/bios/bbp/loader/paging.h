@@ -63,7 +63,7 @@ void page_init();
 * @param stack - pointer to interrupt stack
 * @return 1 if interrupt could not be handled
 */
-uint64 page_fault(int_stack_t *stack);
+uint64 page_fault(isr_stack_t *stack);
 /**
 * Get total installed RAM
 * @return RAM size in bytes

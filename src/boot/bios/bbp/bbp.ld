@@ -2,7 +2,7 @@
 OUTPUT_FORMAT(binary)
 ENTRY(start16)
 SECTIONS {
-	.text 0x1000 : AT( 0x1000 ) {
+	.text 0x5000 : AT( 0x5000 ) {
 		*boot.o(.text); 
 		*(.text);
 	}

@@ -37,8 +37,8 @@
 
 [section .text]
 [bits 64]
-[extern isr_wrapper]							; Import int_handler from C
-[extern irq_wrapper]							; Import irq_handler from C
+[extern isr_wrapper]							; Import isr_wrapper from C
+[extern irq_wrapper]							; Import irq_wrapper from C
 [global idt_set]								; Export void idt_set(idt_ptr_t *idt) to C
 
 ; Macro to create an intterupt service routine for interrupts that do not pass error codes 
@@ -48,7 +48,7 @@ isr%1:
 	cli											; disable interrupts
 	push qword 0								; set error code to 0
 	push qword %1								; set interrupt number
-	call isr_wrapper							; call void isr_handler(int_stack_t args)
+	call isr_wrapper							; call void isr_wrapper(int_stack_t stack)
 	sti											; enable interrupts
 	add rsp, 16									; cleanup stack
 	iretq										; return from interrupt handler
@@ -60,10 +60,10 @@ isr%1:
 isr%1:
 	cli											; disable interrupts
 	push qword %1								; set interrupt number
-	call isr_wrapper							; call void isr_handler(int_stack_t args)
+	call isr_wrapper							; call void isr_wrapper(int_stack_t stack)
 	sti											; enable interrupts
 	add rsp, 16									; cleanup stack
-	iretq										; return from interrupt handler
+    iretq										; return from interrupt handler
 %endmacro
 
 ; Macro to create an IRQ interrupt service routine
@@ -73,9 +73,9 @@ isr%1:
 [global irq%1]
 irq%1:
 	cli											; disable interrupts
-	push qword %1								; set IRQ number in the place of error code (see registers_t in interrupts.h)
+    push qword %1								; set IRQ number in the place of error code (see registers_t in interrupts.h)
 	push qword %2								; set interrupt number
-	call irq_wrapper							; calls void irq_handler(int_stack_t args)
+	call irq_wrapper							; calls void irq_wrapper(int_stack_t stack)
 	sti											; enable interrupts
 	add rsp, 16									; cleanup stack
 	iretq										; return from interrupt handler

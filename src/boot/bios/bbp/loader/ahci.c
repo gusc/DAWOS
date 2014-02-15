@@ -45,6 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 // Device signatures
+#define AHCI_DEV_NONE	0x00000000	// Unknown / Not available
 #define AHCI_DEV_SATA	0x00000101	// SATA drive
 #define AHCI_DEV_SATAPI	0xEB140101	// SATAPI drive
 #define AHCI_DEV_SEMB	0xC33C0101	// Enclosure management bridge
@@ -53,11 +54,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Address masks
 #define AHCI_HBA_MASK 0xFFFFFFFFFFFFE000
 #define AHCI_HBA_SIZE 8192 // 8KB
+#define AHCI_BLOCK_SIZE 0x1000 // Read/Write block size (bytes per PTDT entry)
 
 // ATA statuses
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ 0x08
 // ATA commands
+#define ATA_CMD_IDENTIFY 0xEC
 #define ATA_CMD_READ_DMA_EX 0x25
 // FIS types
 #define FIS_TYPE_REG_H2D 0x27
@@ -71,7 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FIS_TYPE_VENDOR1 0xC7
 #define FIS_TYPE_VENDOR2 0xD4
 
-// AHCI Specification 1.3 data structures
+// AHCI Specification 1.3.1 data structures
 
 /**
 * HBA Port structure
@@ -220,7 +223,17 @@ typedef volatile struct {
 		uint32 dwe			:4;	// Device With Error
 		uint32 reserved2	:12;
 	} fbs;
-	uint32 reserved2[11];
+	// Device sleep
+	struct {
+		uint32 adse			:1; // Agressive device sleep enable
+		uint32 dsp			:1;	// Device sleep present
+		uint32 deto			:8;	// Device sleep exit timeout
+		uint32 mdat			:5; // Maximum device sleep assertion time
+		uint32 dito			:10;// Device sleep idle timeout
+		uint32 dm			:4;	// DITO multiplier
+		uint32 reserved		:3;
+	} devslp;
+	uint32 reserved2[10];
 	uint32 vendor[4];			// Vendor specific
 } ahci_port_t; // 128 bytes
 /**
@@ -229,7 +242,7 @@ typedef volatile struct {
 typedef volatile struct {
 	// Host capability
 	struct {
-		uint32 np			:4;	// Number of Ports
+		uint32 np			:5;	// Number of Ports
 		uint32 sxs			:1;	// External SATA (eSATA) supported
 		uint32 ems			:1;	// Enclosure Management supported
 		uint32 cccs			:1; // Command Completion Coalescing supported
@@ -336,7 +349,7 @@ typedef volatile struct {
 	uint16 count;				// Count register
 	uint8 icc;					// Isochronous command completion
 	uint8 control;				// Control register
-	uint8 reserved2[4];
+	uint8 auxiliary[4];
 } fis_reg_h2d_t; // 20 bytes
 
 typedef volatile struct {
@@ -462,6 +475,10 @@ typedef volatile struct {
 typedef volatile struct {
 	ahci_hba_t *hba;
 	uint8 port;
+    uint8 int_pin;
+    uint8 int_line;
+    uint16 cmd;
+    uint16 sts;
 } ahci_dev_t;
 
 static ahci_dev_t *_ahci_dev;
@@ -470,10 +487,10 @@ static uint64 _ahci_dev_count = 0;
 // Check device type
 static uint32 ahci_get_type(ahci_port_t *port){
 	if (port->ssts.det != 3){
-		return 0;
+		return AHCI_DEV_NONE;
 	}
 	if (port->ssts.ipm != 1){
-		return 0;
+		return AHCI_DEV_NONE;
 	}
 	switch (port->sig){
 		case AHCI_DEV_SATAPI:
@@ -484,7 +501,7 @@ static uint32 ahci_get_type(ahci_port_t *port){
 			return AHCI_DEV_SATA;
 	}
 }
-static void ahci_init_port(ahci_hba_t *hba){
+static void ahci_init_port(ahci_hba_t *hba, pci_device_t *dev){
 	uint32 dev_type = 0;
 	uint32 ports = hba->pi;
 	uint8 i = 0;
@@ -496,8 +513,16 @@ static void ahci_init_port(ahci_hba_t *hba){
 				case AHCI_DEV_SATAPI:
 				case AHCI_DEV_SEMB:
 				case AHCI_DEV_PM:
+                    // Initialize AHCI mode and set interrupt-enable bit
+					hba->ghc.ae = 1;
+					hba->ghc.ie = 1;
+                    // Store into our SATA cache
 					_ahci_dev[_ahci_dev_count].hba = hba;
 					_ahci_dev[_ahci_dev_count].port = i;
+                    _ahci_dev[_ahci_dev_count].int_pin = dev->int_pin;
+                    _ahci_dev[_ahci_dev_count].int_line = dev->int_line;
+                    _ahci_dev[_ahci_dev_count].cmd = dev->header.command;
+                    _ahci_dev[_ahci_dev_count].sts = dev->header.status;
 					_ahci_dev_count ++;
 					break;
 			}
@@ -516,6 +541,7 @@ bool ahci_init(){
 	_ahci_dev = (ahci_dev_t *)mem_alloc(sizeof(ahci_dev_t) * 256);
 
 	dev_count = pci_num_device(0x1, 0x6);
+    debug_print(DC_WB, "Dev count %d", dev_count);
 	if (dev_count > 0){
 		for (i = 0; i < dev_count; i ++){
 			pci_addr_t addr = pci_get_device(0x1, 0x6, i);
@@ -529,9 +555,9 @@ bool ahci_init(){
 					page_map_mmio(abar + offset, abar + offset);
 				}
 				hba = (ahci_hba_t *)abar;
-				if (hba->cap.s64a == 1){
-					ahci_init_port(hba);
-				}
+				//if (hba->cap.s64a == 1){
+					ahci_init_port(hba, dev);
+				//}
 			}
 		}
 	}
@@ -564,6 +590,7 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
 		ahci_port_t *port = &hba->ports[_ahci_dev[idx].port];
 		uint64 spin = 0;
 		int8 slot = ahci_free_slot(hba, port);
+
 		if (slot == -1){
 			return false;
 		}
@@ -572,25 +599,25 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
 		cmd += slot;
 		cmd->desc.cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32);			// Command FIS size
 		cmd->desc.w = 0;												// Read from device
-		cmd->desc.prdtl = (uint16)((len - 1) / 512) + 1;				// PRDT entries count
+		cmd->desc.c = 1;
+		cmd->desc.prdtl = (uint16)((len - 1) / AHCI_BLOCK_SIZE) + 1;	// PRDT entries count
 
 		ahci_hba_cmd_tbl_t *tbl = (ahci_hba_cmd_tbl_t *)cmd->ctba;
 		mem_fill((uint8 *)tbl, sizeof(ahci_hba_cmd_tbl_t) + ((cmd->desc.prdtl - 1) * sizeof(ahci_hba_prdt_entry_t)), 0);
 
 		uint64 i = 0;
-		uint64 count = len / 512;
-		// 512 bytes (1 sector) per PRDT
-		for (; i < cmd->desc.prdtl - 1; i ++)
-		{
+		uint64 count = len / AHCI_BLOCK_SIZE;
+		// Read first entries (if any)
+		for (; i < cmd->desc.prdtl - 1; i ++){
 			tbl->prdt_entry[i].dba = (uint64)buff;
-			tbl->prdt_entry[i].dbc = 512;	// 8K bytes
+			tbl->prdt_entry[i].dbc = AHCI_BLOCK_SIZE;
 			tbl->prdt_entry[i].i = 1;
-			buff += 512;
-			len -= 512;
+			buff += AHCI_BLOCK_SIZE;
+			len -= AHCI_BLOCK_SIZE;
 		}
 		// Last entry
 		tbl->prdt_entry[i].dba = (uint64)buff;
-		tbl->prdt_entry[i].dbc = len;		// 512 bytes per sector
+		tbl->prdt_entry[i].dbc = len;		// Leftover size
 		tbl->prdt_entry[i].i = 1;
  
 		// Setup command
@@ -617,13 +644,25 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
 		if (spin == 1000000){
 			return false;
 		}
- 
-		port->ci = 1<<slot;	// Issue command
- 
-		// Wait for completion
+	
+        port->ci = (1 << slot);				        // Issue command
+		if (!port->cmd.st){
+			if (port->cmd.fre){
+                port->cmd.st = 1;					// Start processing
+			} else {
+				return false;
+			}
+		}
+
+        // Wait for completion
+		spin = 0;
 		while (1) {
 			// In some longer duration reads, it may be helpful to spin on the DPS bit 
 			// in the PxIS port field as well (1 << 5)
+			if (spin >= 1000000){
+				break;
+			}
+			spin ++;
 			if ((port->ci & (1 << slot)) == 0) {
 				break;
 			}
@@ -631,6 +670,10 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
 				// Task file error
 				return false;
 			}
+		}
+
+		if (spin == 1000000){
+			debug_print(DC_WB, "Spinnout");
 		}
  
 		// Check again
@@ -647,6 +690,77 @@ bool ahci_write(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
 		ahci_hba_t *hba = _ahci_dev[idx].hba;
 		ahci_port_t *port = &hba->ports[_ahci_dev[idx].port];
 
+	}
+	return false;
+}
+bool ahci_id(uint64 idx, uint8 *buff){
+    if (idx < _ahci_dev_count){
+		ahci_hba_t *hba = _ahci_dev[idx].hba;
+		ahci_port_t *port = &hba->ports[_ahci_dev[idx].port];
+		uint64 spin = 0;
+		int8 slot = ahci_free_slot(hba, port);
+
+		if (slot == -1){
+			return false;
+		}
+
+        ahci_hba_cmd_header_t *cmd = (ahci_hba_cmd_header_t *)port->clb;
+		cmd += slot;
+        cmd->desc.cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32);			// Command FIS size
+		cmd->desc.w = 0;												// Read from device
+		cmd->desc.c = 1;
+		cmd->desc.prdtl = 1;	// PRDT entries count
+
+		ahci_hba_cmd_tbl_t *tbl = (ahci_hba_cmd_tbl_t *)cmd->ctba;
+		mem_fill((uint8 *)tbl, sizeof(ahci_hba_cmd_tbl_t), 0);
+
+        // Last entry
+		tbl->prdt_entry[0].dba = (uint64)buff;
+		tbl->prdt_entry[0].dbc = 512;		// Leftover size
+		tbl->prdt_entry[0].i = 1;
+
+        fis_reg_h2d_t *fis = (fis_reg_h2d_t *)(tbl->cfis);
+		fis->fis_type = FIS_TYPE_REG_H2D;
+		fis->command = ATA_CMD_IDENTIFY;
+        fis->device = 0;
+        fis->cmd = 1;
+        port->ci = (1 << slot);				        // Issue command
+		if (!port->cmd.st){
+			if (port->cmd.fre){
+                port->cmd.st = 1;					// Start processing
+			} else {
+				return false;
+			}
+		}
+
+        // Wait for completion
+		spin = 0;
+		while (1) {
+			// In some longer duration reads, it may be helpful to spin on the DPS bit 
+			// in the PxIS port field as well (1 << 5)
+			if (spin >= 1000000){
+				break;
+			}
+			spin ++;
+			if ((port->ci & (1 << slot)) == 0) {
+				break;
+			}
+			if (port->is.tfes) {
+				// Task file error
+				return false;
+			}
+		}
+
+		if (spin == 1000000){
+			debug_print(DC_WB, "Spinnout");
+		}
+ 
+		// Check again
+		if (port->is.tfes){
+			return false;
+		}
+ 
+		return true;
 	}
 	return false;
 }
@@ -685,6 +799,8 @@ void ahci_list(){
 		}
 		debug_print(DC_WGR, "     FIS base @0x%x", dev->hba->ports[dev->port].fb);
 		debug_print(DC_WGR, "     CL base  @0x%x", dev->hba->ports[dev->port].clb);
+        debug_print(DC_WGR, "     INT pin: %d, line: %d", dev->int_pin, dev->int_line);
+        debug_print(DC_WGR, "     CMD: %x, STS: %x", dev->cmd, dev->sts);
 	}
 }
 #endif

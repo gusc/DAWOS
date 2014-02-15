@@ -24,14 +24,14 @@
 ; 0x0550 - Disk address packet (DAP) location (2x qword)
 ; 0x0560 - Local data (disk ID, bbp size, etc.) location (2x dword)
 ; 0x0600 - Read buffer location (512 bytes usually)
-; 0x1000 - Stack pointer
-; 0x1000 - 0x80000 - Bootloader code loaded by MBR bootstrap (we have atleast 508KiB or 1016 sectors here)
+; 0x5000 - Stack pointer
+; 0x5000 - 0x80000 - Bootloader code loaded by MBR bootstrap (we have atleast 508KiB or 1016 sectors here)
 
 ; Code location constants
 %define ORG_LOC			0x7C00					; Initial MBR position in memory (where BIOS loads it)
 %define RELOC_LOC		0x0500					; Relocation position (where we will copy neccessary MBR code to chainload bootloader)
 %define	BUFF_LOC		0x0600					; Location of read buffer in memory
-%define BOOT_LOC		0x1000					; Location of BBP bootcode
+%define BOOT_LOC		0x5000					; Location of BBP bootcode
 
 ; Local data structure
 struc tDATA							

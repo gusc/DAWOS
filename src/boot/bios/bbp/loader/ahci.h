@@ -71,6 +71,8 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len);
 */
 bool ahci_write(uint64 idx, uint64 addr, uint8 *buff, uint64 len);
 
+bool ahci_id(uint64 idx, uint8 *buff);
+
 #if DEBUG == 1
 void ahci_list();
 #endif

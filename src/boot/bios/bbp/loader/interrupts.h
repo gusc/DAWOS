@@ -71,27 +71,27 @@ typedef struct {
 	uint64 rflags;				// RFLAGS
 	uint64 rsp;					// Previous stack pointer
 	uint64 ss;					// Stack segment
-} int_stack_t;
+} isr_stack_t;
+typedef struct {
+	uint64 int_no;				// Interrupt number
+	uint64 irq_no;			    // Error code (or IRQ number for IRQs)
+	uint64 rip;					// Return instruction pointer
+	uint64 cs;					// Code segment
+	uint64 rflags;				// RFLAGS
+	uint64 rsp;					// Previous stack pointer
+	uint64 ss;					// Stack segment
+} irq_stack_t;
 /**
 * Interrupt Descriptor Table (IDT) entry structure
 */
 struct idt_entry_struct {
 	uint16 offset_lo;			// The lower 16 bits of 32bit address to jump to when this interrupt fires
-	uint16 segment;				// Kernel segment selector
-	union {
-		uint16 raw;				// Raw value
-		struct {				// IDT flag structure
-			uint16 ist		:3;	// Interrupt stack table
-			uint16 res1		:5;	// This must be zero
-			uint16 type		:4;	// Interrupt gate, trap gate, task gate, etc.
-			uint16 res2		:1;	// This must be zero
-			uint16 dpl		:2;	// Descriptor privilege level
-			uint16 present	:1;	// Present flag
-		} s;
-	} flags;
+	uint16 slector;				// Kernel segment selector
+    uint8 reserved1;            // Must be 0 (duh!)
+    uint8 type;                 // Type attributes
 	uint16 offset_hi;			// The upper 16 bits of 32bit address to jump to
 	uint32 offset_64;			// The upper 32 bits of 64bit address
-	uint32 reserved;			// Reserved for 96bit systems :)
+	uint32 reserved2;			// Reserved for 96bit systems :)
 } __PACKED;
 /**
 * Interrupt Descriptor Table (IDT) entry
@@ -101,12 +101,12 @@ typedef struct idt_entry_struct idt_entry_t;
 * Interrupt service routine or request handler
 * @return 1 if this interrupt is left unhandled
 */
-typedef uint64(*interrupt_handler_t)(int_stack_t* stack) ;
+typedef uint64(*isr_handler_t)(isr_stack_t* stack) ;
 /**
 * Interrupt service routine or request handler
 * @return 1 if this interrupt is left unhandled
 */
-typedef uint64(*irq_handler_t)(int_stack_t* stack) ;
+typedef uint64(*irq_handler_t)(irq_stack_t* stack) ;
 /**
 * Interrupt Descriptor Table (IDT) pointer structure
 */
@@ -127,7 +127,7 @@ void interrupt_init();
 * @param int_no - interrupt number
 * @param handler - callback function
 */
-void interrupt_reg_handler(uint64 int_no, interrupt_handler_t handler);
+void interrupt_reg_isr_handler(uint64 int_no, isr_handler_t handler);
 /**
 * Register an interrupt request handler
 * @param int_no - interrupt number
@@ -137,17 +137,16 @@ void interrupt_reg_irq_handler(uint64 irq_no, irq_handler_t handler);
 /**
 * Interrupt Service Routine (ISR) wrapper
 * This will be defined in kernel code
-* @param regs - registers pushed on the stack by assembly
+* @param stack - registers pushed on the stack by assembly
 * @return void
 */
-void isr_wrapper(int_stack_t regs);
+void isr_wrapper(isr_stack_t stack);
 /**
 * Interrupt Request (IRQ) wrapper
 * This will be defined in kernel code
-* @param regs - registers pushed on the stack by assembly
+* @param stack - registers pushed on the stack by assembly
 * @return void
 */
-void irq_wrapper(int_stack_t regs);
-
+void irq_wrapper(irq_stack_t stack);
 
 #endif

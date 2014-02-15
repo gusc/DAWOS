@@ -43,6 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "paging.h"
 #include "memory.h"
 #include "pci.h"
+#include "pic.h"
 #include "ahci.h"
 #if DEBUG == 1
 	#include "debug_print.h"
@@ -68,26 +69,32 @@ void main64(){
 	// Clear the screen
 	debug_clear(DC_WB);
 	// Show something on the screen
-	debug_print(DC_WB, "Long mode");
+	debug_print(DC_WB, "Booting...");
 #endif
 
 	// Initialize memory manager
+    debug_print(DC_WB, "Init memory");
 	mem_init();
 	// Initialize interrupts
+    debug_print(DC_WB, "Init interrupts");
 	interrupt_init();
-	// Wait a little bit
-	dummy_sleep();	
+    // Wait a bit
+    dummy_sleep();
 	// Initialize paging (well, actually re-initialize)
+    debug_print(DC_WB, "Init paging");
 	page_init();
 	// Initialize kernel heap allocator
+    debug_print(DC_WB, "Init heap");
 	mem_init_heap(HEAP_MAX_SIZE);
 	// Initialize PCI
+    debug_print(DC_WB, "Init PCI");
 	pci_init();
 #if DEBUG == 1
 	//pci_list();
 #endif
 
 	// Initialize AHCI
+    debug_print(DC_WB, "Init AHCI");
 	if (ahci_init()){
 #if DEBUG == 1
 		ahci_list();
@@ -95,11 +102,18 @@ void main64(){
 
 		uint8 *mem = (uint8 *)mem_alloc_clean(512);
 		uint64 dev_count = ahci_num_dev();
-		uint64 y = 0;
+		uint64 y = 23;
 		if (dev_count > 0){
+            if (ahci_id(0, mem)){
+                debug_print(DC_WB, "ID OK");
+                debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
+            } else {
+                debug_print(DC_WB, "ID failed");
+            }
+            mem_fill(mem, 512, 0);
 			if (ahci_read(0, 0, mem, 512)){
 				debug_print(DC_WB, "Read:");
-				for (; y < 64; y += 8){
+				for (y = 0; y < 64; y += 8){
 					debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
 				}
 			} else {

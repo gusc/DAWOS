@@ -39,9 +39,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "../config.h"
 #include "interrupts.h"
+#include "pic.h"
 #include "lib.h"
 #include "io.h"
 #include "paging.h"
+#include "cr.h"
 #if DEBUG == 1
 	#include "debug_print.h"
 #endif
@@ -81,7 +83,7 @@ idt_ptr_t idt_ptr;
 /**
 * Interrupt handlers
 */
-interrupt_handler_t handlers[256];
+isr_handler_t isr_handlers[256];
 /**
 * Interrupt handlers
 */
@@ -146,89 +148,98 @@ extern void irq13();
 extern void irq14();
 extern void irq15();
 
-static void idt_set_entry(uint8 num, uint64 addr, uint16 flags){
+static void idt_set_entry(uint8 num, uint64 addr, uint8 flags){
 	idt[num].offset_lo = (uint16)(addr & 0xFFFF);
 	idt[num].offset_hi = (uint16)((addr >> 16) & 0xFFFF);
 	idt[num].offset_64 = (uint32)((addr >> 32) & 0xFFFFFFFFF);
-	idt[num].segment = 0x08; // Allways a code selector
-	idt[num].flags.raw = flags;
-	idt[num].reserved = 0; // Zero out
+    idt[num].slector = 0x08; // Allways a code selector
+	idt[num].type = flags;
+	idt[num].reserved1 = 0; // Zero out
+    idt[num].reserved2 = 0; // Zero out
 }
 
 void interrupt_init(){
-	mem_fill((uint8 *)&idt, sizeof(idt_entry_t) * 256, 0);
-	mem_fill((uint8 *)&handlers, sizeof(interrupt_handler_t) * 256, 0);
+    mem_fill((uint8 *)&idt, sizeof(idt_entry_t) * 256, 0);
+	mem_fill((uint8 *)&isr_handlers, sizeof(isr_handler_t) * 256, 0);
 	mem_fill((uint8 *)&irq_handlers, sizeof(irq_handler_t) * 16, 0);
 
-	// Remap the IRQ table.
-	outb(0x20, 0x11); // Initialize master PIC
-	outb(0xA0, 0x11); // Initialize slave PIC
-	outb(0x21, 0x20); // Master PIC vector offset (IRQ0 target interrupt number)
-	outb(0xA1, 0x28); // Slave PIC vector offset (IRQ8 landing interrupt number)
-	outb(0x21, 0x04); // Tell Master PIC that Slave PIC is at IRQ2
-	outb(0xA1, 0x02); // Tell Slave PIC that it's cascaded to IRQ2
-	outb(0x21, 0x01); // Enable 8085 mode (whatever that means)
-	outb(0xA1, 0x01); // Enable 8085 mode (whatever that means)
-	outb(0x21, 0x0); // Clear masks
-	outb(0xA1, 0x0); // Clear masks
+	// Send ICW1
+	// bit 0 - we'll send ICW4
+	// bit 4 - we're initializing PIC
+	outb(PICM_CMD, 0x11); // Initialize master PIC
+	outb(PICS_CMD, 0x11); // Initialize slave PIC
+	// Send ICW2
+	outb(PICM_DATA, 0x20); // Send IRQ 0-7 to interrupts 32-39
+	outb(PICS_DATA, 0x28); // Send IRQ 8-15 to interrupts 40-47
+	// Send ICW3
+	outb(PICM_DATA, 0x04); // Tell Master PIC that Slave PIC is at IRQ2
+	outb(PICS_DATA, 0x02); // Tell Slave PIC that it's cascaded to IRQ2
+	// Send ICW4
+	outb(PICM_DATA, 0x01); // Enable 80x86 mode
+	outb(PICS_DATA, 0x01); // Enable 80x86 mode
+	// Enable all the interrupts
+	outb(PICM_DATA, 0x01); // Enable only keyboard
+	outb(PICS_DATA, 0x00); // Enable only PCI lines
 
-	idt_set_entry( 0, (uint64)isr0 , 0x8E00);  // Division by zero exception
-	idt_set_entry( 1, (uint64)isr1 , 0x8E00);  // Debug exception
-	idt_set_entry( 2, (uint64)isr2 , 0x8E00);  // Non maskable (external) interrupt
-	idt_set_entry( 3, (uint64)isr3 , 0x8E00);  // Breakpoint exception
-	idt_set_entry( 4, (uint64)isr4 , 0x8E00);  // INTO instruction overflow exception
-	idt_set_entry( 5, (uint64)isr5 , 0x8E00);  // Out of bounds exception (BOUND instruction)
-	idt_set_entry( 6, (uint64)isr6 , 0x8E00);  // Invalid opcode exception
-	idt_set_entry( 7, (uint64)isr7 , 0x8E00);  // No coprocessor exception
-	idt_set_entry( 8, (uint64)isr8 , 0x8E00);  // Double fault (pushes an error code)
-	idt_set_entry( 9, (uint64)isr9 , 0x8E00);  // Coprocessor segment overrun
-	idt_set_entry(10, (uint64)isr10, 0x8E00);  // Bad TSS (pushes an error code)
-	idt_set_entry(11, (uint64)isr11, 0x8E00);  // Segment not present (pushes an error code)
-	idt_set_entry(12, (uint64)isr12, 0x8E00);  // Stack fault (pushes an error code)
-	idt_set_entry(13, (uint64)isr13, 0x8E00);  // General protection fault (pushes an error code)
-	idt_set_entry(14, (uint64)isr14, 0x8E00);  // Page fault (pushes an error code)
-	idt_set_entry(15, (uint64)isr15, 0x8E00);  // Reserved
-	idt_set_entry(16, (uint64)isr16, 0x8E00);  // FPU exception
-	idt_set_entry(17, (uint64)isr17, 0x8E00);  // Alignment check exception
-	idt_set_entry(18, (uint64)isr18, 0x8E00);  // Machine check exception
-	idt_set_entry(19, (uint64)isr19, 0x8E00);  // Reserved
-	idt_set_entry(20, (uint64)isr20, 0x8E00);  // Reserved
-	idt_set_entry(21, (uint64)isr21, 0x8E00);  // Reserved
-	idt_set_entry(22, (uint64)isr22, 0x8E00);  // Reserved
-	idt_set_entry(23, (uint64)isr23, 0x8E00);  // Reserved
-	idt_set_entry(24, (uint64)isr24, 0x8E00);  // Reserved
-	idt_set_entry(25, (uint64)isr25, 0x8E00);  // Reserved
-	idt_set_entry(26, (uint64)isr26, 0x8E00);  // Reserved
-	idt_set_entry(27, (uint64)isr27, 0x8E00);  // Reserved
-	idt_set_entry(28, (uint64)isr28, 0x8E00);  // Reserved
-	idt_set_entry(29, (uint64)isr29, 0x8E00);  // Reserved
-	idt_set_entry(30, (uint64)isr30, 0x8E00);  // Reserved
-	idt_set_entry(31, (uint64)isr31, 0x8E00);  // Reserved
+	idt_set_entry( 0, (uint64)isr0 , 0x8E);  // Division by zero exception
+	idt_set_entry( 1, (uint64)isr1 , 0x8E);  // Debug exception
+	idt_set_entry( 2, (uint64)isr2 , 0x8E);  // Non maskable (external) interrupt
+	idt_set_entry( 3, (uint64)isr3 , 0x8E);  // Breakpoint exception
+	idt_set_entry( 4, (uint64)isr4 , 0x8E);  // INTO instruction overflow exception
+	idt_set_entry( 5, (uint64)isr5 , 0x8E);  // Out of bounds exception (BOUND instruction)
+	idt_set_entry( 6, (uint64)isr6 , 0x8E);  // Invalid opcode exception
+	idt_set_entry( 7, (uint64)isr7 , 0x8E);  // No coprocessor exception
+	idt_set_entry( 8, (uint64)isr8 , 0x8E);  // Double fault (pushes an error code)
+	idt_set_entry( 9, (uint64)isr9 , 0x8E);  // Coprocessor segment overrun
+	idt_set_entry(10, (uint64)isr10, 0x8E);  // Bad TSS (pushes an error code)
+	idt_set_entry(11, (uint64)isr11, 0x8E);  // Segment not present (pushes an error code)
+	idt_set_entry(12, (uint64)isr12, 0x8E);  // Stack fault (pushes an error code)
+	idt_set_entry(13, (uint64)isr13, 0x8E);  // General protection fault (pushes an error code)
+	idt_set_entry(14, (uint64)isr14, 0x8E);  // Page fault (pushes an error code)
+	idt_set_entry(15, (uint64)isr15, 0x8E);  // Reserved
+	idt_set_entry(16, (uint64)isr16, 0x8E);  // FPU exception
+	idt_set_entry(17, (uint64)isr17, 0x8E);  // Alignment check exception
+	idt_set_entry(18, (uint64)isr18, 0x8E);  // Machine check exception
+	idt_set_entry(19, (uint64)isr19, 0x8E);  // Reserved
+	idt_set_entry(20, (uint64)isr20, 0x8E);  // Reserved
+	idt_set_entry(21, (uint64)isr21, 0x8E);  // Reserved
+	idt_set_entry(22, (uint64)isr22, 0x8E);  // Reserved
+	idt_set_entry(23, (uint64)isr23, 0x8E);  // Reserved
+	idt_set_entry(24, (uint64)isr24, 0x8E);  // Reserved
+	idt_set_entry(25, (uint64)isr25, 0x8E);  // Reserved
+	idt_set_entry(26, (uint64)isr26, 0x8E);  // Reserved
+	idt_set_entry(27, (uint64)isr27, 0x8E);  // Reserved
+	idt_set_entry(28, (uint64)isr28, 0x8E);  // Reserved
+	idt_set_entry(29, (uint64)isr29, 0x8E);  // Reserved
+	idt_set_entry(30, (uint64)isr30, 0x8E);  // Reserved
+	idt_set_entry(31, (uint64)isr31, 0x8E);  // Reserved
 
-	idt_set_entry(32, (uint64)irq0 , 0x8E00);  // IRQ0 - Programmable Interrupt Timer Interrupt
-	idt_set_entry(33, (uint64)irq1 , 0x8E00);  // IRQ1 - Keyboard Interrupt
-	idt_set_entry(34, (uint64)irq2 , 0x8E00);  // IRQ2 - Cascade (used internally by the two PICs. never raised)
-	idt_set_entry(35, (uint64)irq3 , 0x8E00);  // IRQ3 - COM2 (if enabled)
-	idt_set_entry(36, (uint64)irq4 , 0x8E00);  // IRQ4 - COM1 (if enabled)
-	idt_set_entry(37, (uint64)irq5 , 0x8E00);  // IRQ5 - LPT2 (if enabled)
-	idt_set_entry(38, (uint64)irq6 , 0x8E00);  // IRQ6 - Floppy Disk
-	idt_set_entry(39, (uint64)irq7 , 0x8E00);  // IRQ7 - LPT1 / Unreliable "spurious" interrupt (usually)
-	idt_set_entry(40, (uint64)irq8 , 0x8E00);  // IRQ8 - CMOS real-time clock (if enabled)
-	idt_set_entry(41, (uint64)irq9 , 0x8E00);  // IRQ9 - Free for peripherals / legacy SCSI / NIC
-	idt_set_entry(42, (uint64)irq10, 0x8E00);  // IRQ10 - Free for peripherals / SCSI / NIC
-	idt_set_entry(43, (uint64)irq11, 0x8E00);  // IRQ11 - Free for peripherals / SCSI / NIC
-	idt_set_entry(44, (uint64)irq12, 0x8E00);  // IRQ12 - PS2 Mouse
-	idt_set_entry(45, (uint64)irq13, 0x8E00);  // IRQ13 - FPU / Coprocessor / Inter-processor
-	idt_set_entry(46, (uint64)irq14, 0x8E00);  // IRQ14 - Primary ATA Hard Disk
-	idt_set_entry(47, (uint64)irq15, 0x8E00);  // IRQ15 - Secondary ATA Hard Disk
+	idt_set_entry(32, (uint64)irq0 , 0x8E);  // IRQ0 - Programmable Interrupt Timer Interrupt
+	idt_set_entry(33, (uint64)irq1 , 0x8E);  // IRQ1 - Keyboard Interrupt
+	idt_set_entry(34, (uint64)irq2 , 0x8E);  // IRQ2 - Cascade (used internally by the two PICs. never raised)
+	idt_set_entry(35, (uint64)irq3 , 0x8E);  // IRQ3 - COM2 (if enabled)
+	idt_set_entry(36, (uint64)irq4 , 0x8E);  // IRQ4 - COM1 (if enabled)
+	idt_set_entry(37, (uint64)irq5 , 0x8E);  // IRQ5 - LPT2 (if enabled)
+	idt_set_entry(38, (uint64)irq6 , 0x8E);  // IRQ6 - Floppy Disk
+	idt_set_entry(39, (uint64)irq7 , 0x8E);  // IRQ7 - LPT1 / Unreliable "spurious" interrupt (usually)
+	idt_set_entry(40, (uint64)irq8 , 0x8E);  // IRQ8 - CMOS real-time clock (if enabled)
+	idt_set_entry(41, (uint64)irq9 , 0x8E);  // IRQ9 - Free for peripherals / legacy SCSI / NIC
+	idt_set_entry(42, (uint64)irq10, 0x8E);  // IRQ10 - Free for peripherals / SCSI / NIC
+	idt_set_entry(43, (uint64)irq11, 0x8E);  // IRQ11 - Free for peripherals / SCSI / NIC
+	idt_set_entry(44, (uint64)irq12, 0x8E);  // IRQ12 - PS2 Mouse
+	idt_set_entry(45, (uint64)irq13, 0x8E);  // IRQ13 - FPU / Coprocessor / Inter-processor
+	idt_set_entry(46, (uint64)irq14, 0x8E);  // IRQ14 - Primary ATA Hard Disk
+	idt_set_entry(47, (uint64)irq15, 0x8E);  // IRQ15 - Secondary ATA Hard Disk
 
 	idt_ptr.limit = (sizeof(idt_entry_t) * 256) - 1;
 	idt_ptr.base = (uint64)&idt;
-	idt_set(&idt_ptr);
+
+    idt_set(&idt_ptr);
 }
-void interrupt_reg_handler(uint64 int_no, interrupt_handler_t handler){
-	if (int_no < 256){
-		handlers[int_no] = handler;
+
+void interrupt_reg_isr_handler(uint64 int_no, isr_handler_t handler){
+    if (int_no < 256){
+		isr_handlers[int_no] = handler;
 	}
 }
 void interrupt_reg_irq_handler(uint64 irq_no, irq_handler_t handler){
@@ -236,51 +247,57 @@ void interrupt_reg_irq_handler(uint64 irq_no, irq_handler_t handler){
 		irq_handlers[irq_no] = handler;
 	}
 }
-void isr_wrapper(int_stack_t stack){
-	if (handlers[stack.int_no] != 0){
-		interrupt_handler_t handler = handlers[stack.int_no];
-		if (handler(&stack)){
-#if DEBUG == 1
-			debug_print(DC_WRD, "Unhandled interrupt");
-#endif
-			HANG();
-		} else {
+
+void isr_wrapper(isr_stack_t stack){
+	uint8 int_no = (uint8)stack.int_no;
+	// Try to handle interrupt
+	if (isr_handlers[int_no] != 0){
+		isr_handler_t handler = isr_handlers[int_no];
+		if (!handler(&stack)){
 			return;
-		}
+#if DEBUG == 1
+		} else {
+            debug_print(DC_WB, "Unhandled interrupt");
+#endif
+        }
 	}
 
 #if DEBUG == 1
 	debug_print(DC_WB, "No handler found");
-	if (stack.int_no < 19){
-		debug_print(DC_WB, "INT %d, %s", stack.int_no, ints[stack.int_no]);
+	if (int_no < 19){
+		debug_print(DC_WB, "INT %d, %s", int_no, ints[int_no]);
 	} else {
-		debug_print(DC_WB, "INT %d", stack.int_no);
+		debug_print(DC_WB, "INT %d", int_no);
 	}
 #endif
 
 	// Process some exceptions here	
-	switch (stack.int_no){
+	switch (int_no){
 		case 0: // Division by zero
 			//stack.rip++; // it's ok to divide by zero - move to next instruction :P
 			break;
 		case 6: // Invalid opcode
-			BREAK();
+			HANG();
 			break;
 		case 13: // General protection fault
 #if DEBUG == 1
 			debug_print(DC_WRD, "Error: %x", stack.err_code);
+			debug_print(DC_WRD, "SP: %x", stack.rsp);
 #endif
 			HANG();
 			break;
 	}
 }
 
-void irq_wrapper(int_stack_t stack){
+void irq_wrapper(irq_stack_t stack){
+    uint8 irq_no = (uint8)stack.irq_no;
+    uint16 isr = pic_read_ocw3(PIC_READ_ISR);
 #if DEBUG == 1
-	debug_print(DC_WB, "IRQ %d", stack.err_code);
+    debug_print_at(74, 0, DC_WB, "IRQ %d", irq_no);
 #endif
-	if (handlers[stack.err_code] != 0){
-		irq_handler_t handler = handlers[stack.int_no];
+
+	if (irq_handlers[irq_no] != 0){
+		irq_handler_t handler = irq_handlers[irq_no];
 		if (handler(&stack)){
 #if DEBUG == 1
 			debug_print(DC_WRD, "Unhandled IRQ");
@@ -288,7 +305,8 @@ void irq_wrapper(int_stack_t stack){
 		}
 	}
 
-#if DEBUG == 1
-	debug_print(DC_WB, "No handler found");
-#endif
+	// Tell PIC that it's done
+    if (isr & (1 << irq_no)){
+        pic_eoi(irq_no);
+    }
 }

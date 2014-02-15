@@ -51,6 +51,11 @@ static uint8 _base_color = 0x00;
 
 static void __debug_print_f(uint8 x, uint8 y, uint8 color, const char *format, va_list args);
 
+void debug_cursor(uint64 *x, uint64 *y){
+	*x = _x;
+	*y = _y;
+}
+
 void debug_clear(uint8 color){
 	char *vidmem = (char *)VIDEOMEM_LOC;
 	_base_color = color;

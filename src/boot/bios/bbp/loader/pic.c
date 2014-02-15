@@ -1,11 +1,8 @@
 /*
+PIC functions
+=============
 
-Helper functions for operations with teletype (text mode) screen
-================================================================
-
-Teletype video functions:
-	* clear screen
-	* print a formated string on the screen
+Programmable Interrupt Controller
 
 License (BSD-3)
 ===============
@@ -37,54 +34,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef __video_h
-#define __video_h
+#include "pic.h"
+#include "io.h"
 
-#include "common.h"
-
-// Some fancy color definitions :)
-#define DC_WB 0xF0
-#define DC_BW 0x0F
-#define DC_WLG 0xF7
-#define DC_WDG 0xF8
-#define DC_WBL 0xF1
-#define DC_WGR 0xF2
-#define DC_WRD 0xF4
-
-/**
-* Get current cursor location
-* @param x - pointer to variable where to store x coordinate
-* @param y - pointer to variable where to store y coordinate
-*/
-void debug_cursor(uint64 *x, uint64 *y);
-/**
-* Clear the teletype (text mode) screen
-* @param color - color byte
-* @return void
-*/
-void debug_clear(uint8 color);
-/**
-* Scroll whole video buffer upwards
-* @return void
-*/
-void debug_scroll();
-/**
-* Print a formated string on the teletype (text mode) screen
-* @param x coordinate (a.k.a. column 0-79)
-* @param y coordinate (a.k.a. line 0-24)
-* @param color - color byte
-* @param [in] format - standard C printf format string
-* @param [in] ... - additional arguments
-* @return void
-*/
-void debug_print_at(uint8 x, uint8 y, uint8 color, const char *format, ...);
-/**
-* Print a formated string on the teletype (text mode) screen
-* @param color - color byte
-* @param [in] format - standard C printf format string
-* @param [in] ... - additional arguments
-* @return void
-*/
-void debug_print(uint8 color, const char *format, ...);
-
-#endif /* __video_h */
+void pic_enable(uint16 irq_mask){
+	irq_mask = (~irq_mask);
+	uint8 irq_m = (uint8)irq_mask;
+	uint8 irq_s = (uint8)(irq_mask >> 8);
+	outb(PICS_DATA, irq_s);
+	outb(PICM_DATA, irq_m);
+}
+void pic_disable(){
+	outb(PICS_DATA, 0xFF);
+	outb(PICM_DATA, 0xFF);
+}
+uint16 pic_read_ocw3(uint8 ocw3){
+	outb(PICM_CMD, ocw3);
+    outb(PICS_CMD, ocw3);
+    return (inb(PICS_CMD) << 8) | inb(PICM_CMD);
+}
+void pic_eoi(uint64 irq){
+	if (irq >= 8){
+		outb(PICS_CMD, PIC_EOI);
+	}
+	outb(PICM_CMD, PIC_EOI);
+}

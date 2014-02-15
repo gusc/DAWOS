@@ -541,6 +541,9 @@ static void page_merge_right(page_header_t *block){
 }
 
 void page_init(uint64 ammount){
+    // Register page fault handler
+	interrupt_reg_isr_handler(14, page_fault);
+
 	_pml4 = (pm_t *)get_cr3();
 	// Read E820 memory map and mark used regions
 	e820map_t *mem_map = (e820map_t *)E820_LOC;
@@ -557,7 +560,7 @@ void page_init(uint64 ammount){
 		_page_list[i] = 0;
 	}
 	
-	// Get total RAM and map some pages
+    // Get total RAM and map some pages
 	for (i = 0; i < mem_map->size; i ++){
 		if (mem_map->entries[i].base + mem_map->entries[i].length > _total_mem){
 			_total_mem = mem_map->entries[i].base + mem_map->entries[i].length;
@@ -580,44 +583,44 @@ void page_init(uint64 ammount){
 			}
 		}
 #if DEBUG == 1
-		//debug_print(DC_WB, "%x - %x (%s)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, types[mem_map->entries[i].type - 1]);
+		//debug_print(DC_WB, "%x - %x (%d)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, mem_map->entries[i].type);
 #endif
 	}
-
-	// Register page fault handler
-	interrupt_reg_handler(14, page_fault);
 }
-uint64 page_fault(int_stack_t *stack){
+uint64 page_fault(isr_stack_t *stack){
 	uint64 fail_addr = get_cr2();
-#if DEBUG == 1
-	// From JamesM tutorials
-	int present   = !(stack->err_code & 0x1); // Page not present
-	int rw = stack->err_code & 0x2;           // Write operation?
-	int us = stack->err_code & 0x4;           // Processor was in user-mode?
-	int reserved = stack->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
-	int id = stack->err_code & 0x10;          // Caused by an instruction fetch?
 
+#if DEBUG == 1
 	debug_print(DC_WRD, "Page fault");
-	if (present) {debug_print(DC_WRD, "present ");}
-	if (rw) {debug_print(DC_WRD, "read-only ");}
-	if (us) {debug_print(DC_WRD, "user-mode ");}
-	if (reserved) {debug_print(DC_WRD, "reserved ");}
+    // Page not present
+	if (stack->err_code & 0x1) {
+        debug_print(DC_WRD, "  not present");
+    }
+    // Write operation?
+	if (stack->err_code & 0x2) {
+        debug_print(DC_WRD, "  read-only");
+    }
+    // Processor was in user-mode?
+	if (stack->err_code & 0x4) {
+        debug_print(DC_WRD, "  user-mode");
+    }
+    // Overwritten CPU-reserved bits of page entry?
+	if (stack->err_code & 0x8) {
+        debug_print(DC_WRD, "  reserved");
+    }
+    // Caused by an instruction fetch?
+    if (stack->err_code & 0x10){
+        debug_print(DC_WRD, "  i-fetch");
+    }
 	debug_print(DC_WRD, "Error: %x", stack->err_code);
 	debug_print(DC_WRD, "Addr: @%x", fail_addr);
 #endif
-
-	HANG();
-			
-
+    
 	// Map this page if it's not mapped yet, otherwise hang
 	if (!page_resolve(fail_addr)){
 		if (!page_map(fail_addr, fail_addr)){
-			HANG();
 			return 1;
 		}
-	} else {
-		HANG();
-		return 1;
 	}
 	return 0;
 }
