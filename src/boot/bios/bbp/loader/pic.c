@@ -37,6 +37,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "pic.h"
 #include "io.h"
 
+void pic_init(){
+    // Send ICW1
+	// bit 0 - we'll send ICW4
+	// bit 4 - we're initializing PIC
+	outb(PICM_CMD, 0x11); // Initialize master PIC
+	outb(PICS_CMD, 0x11); // Initialize slave PIC
+	// Send ICW2
+	outb(PICM_DATA, 0x20); // Send IRQ 0-7 to interrupts 32-39
+	outb(PICS_DATA, 0x28); // Send IRQ 8-15 to interrupts 40-47
+	// Send ICW3
+	outb(PICM_DATA, 0x04); // Tell Master PIC that Slave PIC is at IRQ2
+	outb(PICS_DATA, 0x02); // Tell Slave PIC that it's cascaded to IRQ2
+	// Send ICW4
+	outb(PICM_DATA, 0x01); // Enable 80x86 mode
+	outb(PICS_DATA, 0x01); // Enable 80x86 mode
+    // Enable interrupts
+    pic_enable(0xFFFE);
+}
 void pic_enable(uint16 irq_mask){
 	irq_mask = (~irq_mask);
 	uint8 irq_m = (uint8)irq_mask;

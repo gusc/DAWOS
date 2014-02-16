@@ -1,9 +1,7 @@
 /*
+ATA functions
+=============
 
-Loader entry point
-==================
-
-This is where the fun part begins
 
 License (BSD-3)
 ===============
@@ -35,58 +33,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "../config.h"
-#include "main64.h"
-#include "lib.h"
-#include "io.h"
-#include "interrupts.h"
-#include "paging.h"
-#include "memory.h"
-#include "pci.h"
-#include "pit.h"
-#include "pic.h"
 #include "ata.h"
+#include "pci.h"
+#include "memory.h"
 #if DEBUG == 1
-	#include "debug_print.h"
+    #include "debug_print.h"
 #endif
 
-/**
-* Loader entry point
-*/
-void main64(){
+bool ata_init(){
+    uint8 dev_count = pci_num_device(0x01, 0x01);
+    
+    debug_print(DC_WB, "IDE count: %d", dev_count);
 
-#if DEBUG == 1
-	// Clear the screen
-	debug_clear(DC_WB);
-	// Show something on the screen
-	debug_print(DC_WB, "Booting...");
-#endif
+    if (dev_count > 0){
+        pci_addr_t addr = pci_get_device(0x01, 0x01, 0);
+    
+        debug_print(DC_WB, "    Addr: 0x%x", addr.raw);
 
-    // Initialize memory manager
-    mem_init();
-    // Initialize PIC
-    pic_init();
-    // Initialize interrupts
-    interrupt_init();
-    // Initialize paging (well, actually re-initialize)
-    page_init();
-    // Initialize kernel heap allocator
-    mem_init_heap(HEAP_MAX_SIZE);
-    // Initialize PIT
-    pit_init();
-    // Initialize PCI
-    pci_init();
+        if (addr.raw != 0){
+            pci_device_t *dev = (pci_device_t *)mem_alloc(sizeof(pci_device_t));
+            pci_get_config(dev, addr);
 
-#if DEBUG == 1
-	//pci_list();
-#endif
+            debug_print(DC_WB, "    BAR0: 0x%x", dev->bar[0]);
+            debug_print(DC_WB, "    BAR1: 0x%x", dev->bar[1]);
+            debug_print(DC_WB, "    BAR2: 0x%x", dev->bar[2]);
+            debug_print(DC_WB, "    BAR3: 0x%x", dev->bar[3]);
+            debug_print(DC_WB, "    BAR4: 0x%x", dev->bar[4]);
+        }
+    }
 
-	// Initialize ATA
-    ata_init();
-	
-#if DEBUG == 1
-	debug_print(DC_WB, "Done");
-#endif
-	// Infinite loop
-	while(true){}
+    return false;
 }
+

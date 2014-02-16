@@ -1,9 +1,8 @@
 /*
+Sleep routine
+=============
 
-Loader entry point
-==================
-
-This is where the fun part begins
+Simple PIT based sleep routine
 
 License (BSD-3)
 ===============
@@ -35,58 +34,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "../config.h"
-#include "main64.h"
-#include "lib.h"
-#include "io.h"
-#include "interrupts.h"
-#include "paging.h"
-#include "memory.h"
-#include "pci.h"
+#include "sleep.h"
 #include "pit.h"
-#include "pic.h"
-#include "ata.h"
-#if DEBUG == 1
-	#include "debug_print.h"
-#endif
 
-/**
-* Loader entry point
-*/
-void main64(){
+void isleep(uint64 iter){
+	uint32 x = 1;
+	while(x < iter){
+		x ++;
+	}
+}
 
-#if DEBUG == 1
-	// Clear the screen
-	debug_clear(DC_WB);
-	// Show something on the screen
-	debug_print(DC_WB, "Booting...");
-#endif
-
-    // Initialize memory manager
-    mem_init();
-    // Initialize PIC
-    pic_init();
-    // Initialize interrupts
-    interrupt_init();
-    // Initialize paging (well, actually re-initialize)
-    page_init();
-    // Initialize kernel heap allocator
-    mem_init_heap(HEAP_MAX_SIZE);
-    // Initialize PIT
-    pit_init();
-    // Initialize PCI
-    pci_init();
-
-#if DEBUG == 1
-	//pci_list();
-#endif
-
-	// Initialize ATA
-    ata_init();
-	
-#if DEBUG == 1
-	debug_print(DC_WB, "Done");
-#endif
-	// Infinite loop
-	while(true){}
+void sleep(uint64 time){
+    uint64 counter = (uint16)pit_get_counter();
+    // We assume PIT stays at 1ms for now
+    //uint64 tick_time = 1193180 / counter;
+    //uint64 tick_count = 1000 / time;
+    uint64 tick_start = pit_get_ticks();
+    uint64 tick = tick_start;
+    while (tick < tick_start + time){
+        tick = pit_get_ticks();
+    }
 }

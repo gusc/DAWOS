@@ -1,9 +1,10 @@
 /*
+PIT functions
+=============
 
-Loader entry point
-==================
+Programmable Interval Timer
 
-This is where the fun part begins
+Channel 0 is the only one we're using here, so there are no channel selectors implemented
 
 License (BSD-3)
 ===============
@@ -36,57 +37,62 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "../config.h"
-#include "main64.h"
-#include "lib.h"
-#include "io.h"
-#include "interrupts.h"
-#include "paging.h"
-#include "memory.h"
-#include "pci.h"
 #include "pit.h"
 #include "pic.h"
-#include "ata.h"
+#include "io.h"
 #if DEBUG == 1
-	#include "debug_print.h"
+    #include "debug_print.h"
 #endif
 
-/**
-* Loader entry point
-*/
-void main64(){
+uint16 _counter = 0;
+uint8 _mode = 0;
+uint64 _ticks = 0;
 
-#if DEBUG == 1
-	// Clear the screen
-	debug_clear(DC_WB);
-	// Show something on the screen
-	debug_print(DC_WB, "Booting...");
-#endif
+void pit_init(){
+    // Disable IRQ0
+    pic_enable(0xFFFE);
+    // Initialize PIT to work with 1ms intervals
+    pit_set(1193, PIT_MODE_RATE);
+    
+    interrupt_reg_irq_handler(0, &pit_handler);
 
-    // Initialize memory manager
-    mem_init();
-    // Initialize PIC
-    pic_init();
-    // Initialize interrupts
-    interrupt_init();
-    // Initialize paging (well, actually re-initialize)
-    page_init();
-    // Initialize kernel heap allocator
-    mem_init_heap(HEAP_MAX_SIZE);
-    // Initialize PIT
-    pit_init();
-    // Initialize PCI
-    pci_init();
+    // Re-enable IRQ0
+    pic_enable(0xFFFF);
+}
+uint16 pit_current_count(){
+    outb(PIT_CMD, PIT_CMD_LATCH);
+    return inw(PIT_CH0);
+}
+uint16 pit_get_counter(){
+    return _counter;
+}
+uint8 pit_get_mode(){
+    return _mode;
+}
+uint64 pit_get_ticks(){
+    return _ticks;
+}
+void pit_reset(){
+    uint8 cmd = PIT_CMD_RELOAD;
+    cmd |= (_mode << 1);
 
-#if DEBUG == 1
-	//pci_list();
-#endif
+    outb(PIT_CMD, cmd);
+    outb(PIT_CH0, (uint8)_counter);
+    outb(PIT_CH0, (uint8)(_counter >> 8));
 
-	// Initialize ATA
-    ata_init();
-	
-#if DEBUG == 1
-	debug_print(DC_WB, "Done");
-#endif
-	// Infinite loop
-	while(true){}
+    _ticks = 0;
+}
+void pit_set(uint16 counter, uint8 mode){
+    mode &= 0x7;
+    _mode = mode;
+    _counter = counter;
+    if (_counter == 0){
+        _counter = 0xFFFF;
+    }
+
+    pit_reset();
+}
+uint64 pit_handler(irq_stack_t *stack){
+    _ticks ++;
+    return 0;
 }

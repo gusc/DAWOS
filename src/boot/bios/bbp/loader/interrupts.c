@@ -163,24 +163,6 @@ void interrupt_init(){
 	mem_fill((uint8 *)&isr_handlers, sizeof(isr_handler_t) * 256, 0);
 	mem_fill((uint8 *)&irq_handlers, sizeof(irq_handler_t) * 16, 0);
 
-	// Send ICW1
-	// bit 0 - we'll send ICW4
-	// bit 4 - we're initializing PIC
-	outb(PICM_CMD, 0x11); // Initialize master PIC
-	outb(PICS_CMD, 0x11); // Initialize slave PIC
-	// Send ICW2
-	outb(PICM_DATA, 0x20); // Send IRQ 0-7 to interrupts 32-39
-	outb(PICS_DATA, 0x28); // Send IRQ 8-15 to interrupts 40-47
-	// Send ICW3
-	outb(PICM_DATA, 0x04); // Tell Master PIC that Slave PIC is at IRQ2
-	outb(PICS_DATA, 0x02); // Tell Slave PIC that it's cascaded to IRQ2
-	// Send ICW4
-	outb(PICM_DATA, 0x01); // Enable 80x86 mode
-	outb(PICS_DATA, 0x01); // Enable 80x86 mode
-	// Enable all the interrupts
-	outb(PICM_DATA, 0x01); // Enable only keyboard
-	outb(PICS_DATA, 0x00); // Enable only PCI lines
-
 	idt_set_entry( 0, (uint64)isr0 , 0x8E);  // Division by zero exception
 	idt_set_entry( 1, (uint64)isr1 , 0x8E);  // Debug exception
 	idt_set_entry( 2, (uint64)isr2 , 0x8E);  // Non maskable (external) interrupt
@@ -233,7 +215,6 @@ void interrupt_init(){
 
 	idt_ptr.limit = (sizeof(idt_entry_t) * 256) - 1;
 	idt_ptr.base = (uint64)&idt;
-
     idt_set(&idt_ptr);
 }
 
@@ -277,12 +258,16 @@ void isr_wrapper(isr_stack_t stack){
 			//stack.rip++; // it's ok to divide by zero - move to next instruction :P
 			break;
 		case 6: // Invalid opcode
+            debug_print(DC_WRD, "Error: %x", stack.err_code);
+			debug_print(DC_WRD, "SP: %x", stack.rsp);
+            debug_print(DC_WRD, "IP: %x", stack.rip);
 			HANG();
 			break;
 		case 13: // General protection fault
 #if DEBUG == 1
 			debug_print(DC_WRD, "Error: %x", stack.err_code);
 			debug_print(DC_WRD, "SP: %x", stack.rsp);
+            debug_print(DC_WRD, "IP: %x", stack.rip);
 #endif
 			HANG();
 			break;
@@ -292,18 +277,18 @@ void isr_wrapper(isr_stack_t stack){
 void irq_wrapper(irq_stack_t stack){
     uint8 irq_no = (uint8)stack.irq_no;
     uint16 isr = pic_read_ocw3(PIC_READ_ISR);
-#if DEBUG == 1
-    debug_print_at(74, 0, DC_WB, "IRQ %d", irq_no);
-#endif
-
 	if (irq_handlers[irq_no] != 0){
 		irq_handler_t handler = irq_handlers[irq_no];
 		if (handler(&stack)){
 #if DEBUG == 1
-			debug_print(DC_WRD, "Unhandled IRQ");
+			debug_print(DC_WRD, "Unhandled IRQ %d", irq_no);
 #endif
 		}
-	}
+	} else {
+#if DEBUG == 1
+        debug_print_at(74, 0, DC_WB, "IRQ %d", irq_no);
+#endif
+    }
 
 	// Tell PIC that it's done
     if (isr & (1 << irq_no)){

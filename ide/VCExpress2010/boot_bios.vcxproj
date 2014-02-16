@@ -49,6 +49,8 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\paging.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\pci.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\pic.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\pit.h" />
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\sleep.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c" />
@@ -64,6 +66,8 @@
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\paging.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\pci.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\pic.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\pit.c" />
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\sleep.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3D779CE6-A610-49F7-AC07-992AEEB4115D}</ProjectGuid>

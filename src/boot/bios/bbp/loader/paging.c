@@ -542,7 +542,7 @@ static void page_merge_right(page_header_t *block){
 
 void page_init(uint64 ammount){
     // Register page fault handler
-	interrupt_reg_isr_handler(14, page_fault);
+	interrupt_reg_isr_handler(14, &page_fault);
 
 	_pml4 = (pm_t *)get_cr3();
 	// Read E820 memory map and mark used regions
@@ -578,7 +578,7 @@ void page_init(uint64 ammount){
 					start = INIT_MEM;
 				}
 				uint64 size = mem_map->entries[i].length - (start - mem_map->entries[i].base);
-				page_create_block((void *)start, size);
+                page_create_block((void *)start, size);
 				page_free_insert((page_header_t *)start);
 			}
 		}

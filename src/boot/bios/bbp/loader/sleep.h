@@ -1,9 +1,8 @@
 /*
+Sleep routine
+=============
 
-Loader entry point
-==================
-
-This is where the fun part begins
+Simple PIT based sleep routine
 
 License (BSD-3)
 ===============
@@ -35,58 +34,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "../config.h"
-#include "main64.h"
-#include "lib.h"
-#include "io.h"
-#include "interrupts.h"
-#include "paging.h"
-#include "memory.h"
-#include "pci.h"
-#include "pit.h"
-#include "pic.h"
-#include "ata.h"
-#if DEBUG == 1
-	#include "debug_print.h"
-#endif
+#ifndef __sleep_h
+#define __sleep_h
+
+#include "common.h"
 
 /**
-* Loader entry point
+* Iterated sleep (CPU speed dependant)
+* @param iter - how many iterations to wait till exit
 */
-void main64(){
+void isleep(uint64 iter);
+/**
+* Sleep for some milliseconds
+* @param time - time in milliseconds
+*/
+void sleep(uint64 time);
 
-#if DEBUG == 1
-	// Clear the screen
-	debug_clear(DC_WB);
-	// Show something on the screen
-	debug_print(DC_WB, "Booting...");
 #endif
-
-    // Initialize memory manager
-    mem_init();
-    // Initialize PIC
-    pic_init();
-    // Initialize interrupts
-    interrupt_init();
-    // Initialize paging (well, actually re-initialize)
-    page_init();
-    // Initialize kernel heap allocator
-    mem_init_heap(HEAP_MAX_SIZE);
-    // Initialize PIT
-    pit_init();
-    // Initialize PCI
-    pci_init();
-
-#if DEBUG == 1
-	//pci_list();
-#endif
-
-	// Initialize ATA
-    ata_init();
-	
-#if DEBUG == 1
-	debug_print(DC_WB, "Done");
-#endif
-	// Infinite loop
-	while(true){}
-}

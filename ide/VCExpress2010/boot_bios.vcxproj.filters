@@ -131,6 +131,12 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\ata.h">
       <Filter>bbp\loader</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\pit.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\boot\bios\bbp\loader\sleep.h">
+      <Filter>bbp\loader</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c">
@@ -170,6 +176,12 @@
       <Filter>bbp\loader</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\ata.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\pit.c">
+      <Filter>bbp\loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\boot\bios\bbp\loader\sleep.c">
       <Filter>bbp\loader</Filter>
     </ClCompile>
   </ItemGroup>

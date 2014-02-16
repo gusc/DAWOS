@@ -52,9 +52,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PIC_READ_IRR                0x0a    // OCW3 irq ready next CMD read
 #define PIC_READ_ISR                0x0b    // OCW3 irq service next CMD read
 
+
+/**
+* Initialize PIC
+*/
+void pic_init();
 /**
 * Enable PIC
-* @param irq_mask - IRQ mask (0-15 bits for IRQs 0-15)
+* @param irq_mask - IRQ mask (0-15 bits for IRQs 0-15, inverse 1=on, 0=off)
 */
 void pic_enable(uint16 irq_mask);
 /**
