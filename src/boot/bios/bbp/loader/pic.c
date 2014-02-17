@@ -52,8 +52,6 @@ void pic_init(){
 	// Send ICW4
 	outb(PICM_DATA, 0x01); // Enable 80x86 mode
 	outb(PICS_DATA, 0x01); // Enable 80x86 mode
-    // Enable interrupts
-    pic_enable(0xFFFE);
 }
 void pic_enable(uint16 irq_mask){
 	irq_mask = (~irq_mask);

@@ -123,6 +123,14 @@ typedef struct idt_ptr_struct idt_ptr_t;
 */
 void interrupt_init();
 /**
+* Disable interrupts
+*/
+extern void interrupt_disable();
+/**
+* Enable interrupts
+*/
+extern void interrupt_enable();
+/**
 * Register an interrupt service routine handler
 * @param int_no - interrupt number
 * @param handler - callback function

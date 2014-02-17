@@ -44,7 +44,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "memory.h"
 #include "pci.h"
 #include "pit.h"
-#include "pic.h"
 #include "ata.h"
 #if DEBUG == 1
 	#include "debug_print.h"
@@ -64,8 +63,6 @@ void main64(){
 
     // Initialize memory manager
     mem_init();
-    // Initialize PIC
-    pic_init();
     // Initialize interrupts
     interrupt_init();
     // Initialize paging (well, actually re-initialize)
@@ -74,14 +71,11 @@ void main64(){
     mem_init_heap(HEAP_MAX_SIZE);
     // Initialize PIT
     pit_init();
+    
     // Initialize PCI
     pci_init();
-
-#if DEBUG == 1
-	//pci_list();
-#endif
-
 	// Initialize ATA
+    debug_print(DC_WB, "ATA");
     ata_init();
 	
 #if DEBUG == 1

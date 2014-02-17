@@ -250,13 +250,22 @@ static void sort_e820(e820map_t *mem_map){
 	}
 }
 /**
+* Invalidate page
+* @param vaddr - page address to invalidate
+* @return void
+*/
+static void page_invalidate(uint64 vaddr){
+    vaddr = PAGE_ALIGN(vaddr);
+    asm volatile ( "invlpg %0" : : "m"(vaddr) : "memory" );
+}
+/**
 * Create a heap block. Write header and footer information.
 * @param ptr - free memory location on which to build a page block
 * @param size - block size (including header and footer)
 */
 static void page_create_block(void *ptr, uint64 size){
 	uint64 addr = PAGE_ALIGN((uint64)ptr);
-	size = PAGE_SIZE_ALIGN(size);
+    size = PAGE_SIZE_ALIGN(size);
 
 	// Cast this void space to a header of the heap block 
 	page_header_t *header = (page_header_t *)ptr;
@@ -540,11 +549,62 @@ static void page_merge_right(page_header_t *block){
 	}
 }
 
-void page_init(uint64 ammount){
-    // Register page fault handler
-	interrupt_reg_isr_handler(14, &page_fault);
+bool page_id_map(uint64 paddr, uint64 vaddr, bool mmio){
+	// Do the identity map
+	pm_t *table = (pm_t *)page_get_pml4();
+	pm_t *ct;
+	uint8 i;
+	uint64 idx;
+    paddr = PAGE_ALIGN(paddr);
+    vaddr = PAGE_ALIGN(vaddr);
+	vaddr = PAGE_CANONICAL(vaddr);
+	for (i = 4; i > 1; i --){
+		// Get page table entry index from the virtual address
+        idx = PAGE_PML_IDX(vaddr, i);
+        if (!table[idx].present){
+			// Next level table does not exist - create one
+            ct = (pm_t *)mem_alloc_align(sizeof(pm_t) * 512);
+            mem_fill((uint8 *)ct, sizeof(pm_t) * 512, 0);
 
-	_pml4 = (pm_t *)get_cr3();
+			// Store the physical address
+			table[idx].frame = PAGE_FRAME((uint64)ct);
+			// Set the flags
+			table[idx].present = 1;
+			table[idx].writable = 1;
+            table[idx].write_through = 1;
+			if (mmio){
+				table[idx].cache_disable = 1;
+			}
+			// Continiue with the newly created table
+			table = ct;
+		} else {
+			// Find next level table address
+			table = (pm_t *)PAGE_ADDRESS(table, idx);
+		}
+	}
+	// Get page index in PML1 table from virtual address 
+	idx = PAGE_PML_IDX(vaddr, 1);
+    // Last level table
+	if (!table[idx].present){
+		// Store physical address
+		table[idx].frame = PAGE_FRAME(paddr);
+		// Set the flags
+		table[idx].present = 1;
+		table[idx].writable = 1;
+		if (mmio){
+            table[idx].write_through = 1;
+			table[idx].cache_disable = 1;
+		}
+        // Invalidate page
+        page_invalidate(vaddr);
+		return true;
+	}
+	// Page entry was already present - don't overwrite it
+	return false;
+}
+
+void page_init(uint64 ammount){
+    _pml4 = (pm_t *)get_cr3();
 	// Read E820 memory map and mark used regions
 	e820map_t *mem_map = (e820map_t *)E820_LOC;
 	// Sort memory map
@@ -559,20 +619,28 @@ void page_init(uint64 ammount){
 	for (i = 0; i < PAGE_LIST_COUNT; i ++){
 		_page_list[i] = 0;
 	}
-	
+
     // Get total RAM and map some pages
 	for (i = 0; i < mem_map->size; i ++){
+
+#if DEBUG == 1
+	debug_print(DC_WB, "%x - %x (%d)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, mem_map->entries[i].type);
+#endif
+
 		if (mem_map->entries[i].base + mem_map->entries[i].length > _total_mem){
 			_total_mem = mem_map->entries[i].base + mem_map->entries[i].length;
 		}
-		for (k = 0; k < mem_map->entries[i].length; k += PAGE_SIZE){
-			va = mem_map->entries[i].base + k;
-			page_map(va, va);
-		}
-		if (mem_map->entries[i].type == kMemOk){
-			_available_mem += mem_map->entries[i].length;
+        if (mem_map->entries[i].type == kMemOk){
+            // ID map the memory region
+            for (k = 0; k < mem_map->entries[i].length; k += PAGE_SIZE){
+                va = PAGE_ALIGN(mem_map->entries[i].base + k);
+                if (va >= INIT_MEM){
+                    page_id_map(va, va, false);
+                }
+		    }
+            _available_mem += mem_map->entries[i].length;
 			if (mem_map->entries[i].base + mem_map->entries[i].length > INIT_MEM){
-				// Mark rest of the memory free
+                // Mark rest of the memory free
 				uint64 start = mem_map->entries[i].base;
 				if (start < INIT_MEM){
 					start = INIT_MEM;
@@ -581,11 +649,11 @@ void page_init(uint64 ammount){
                 page_create_block((void *)start, size);
 				page_free_insert((page_header_t *)start);
 			}
-		}
-#if DEBUG == 1
-		//debug_print(DC_WB, "%x - %x (%d)", mem_map->entries[i].base, mem_map->entries[i].base + mem_map->entries[i].length, mem_map->entries[i].type);
-#endif
+        }
 	}
+
+    // Register page fault handler
+	interrupt_reg_isr_handler(14, &page_fault);
 }
 uint64 page_fault(isr_stack_t *stack){
 	uint64 fail_addr = get_cr2();
@@ -630,56 +698,6 @@ uint64 page_total_mem(){
 uint64 page_available_mem(){
 	return _available_mem;
 }
-bool page_id_map(uint64 paddr, uint64 vaddr, bool mmio){
-	// Do the identity map
-	pm_t *table = (pm_t *)page_get_pml4();
-	pm_t *ct;
-	uint8 i;
-	uint64 idx;
-	vaddr = PAGE_CANONICAL(vaddr);
-	for (i = 4; i > 1; i --){
-		// Get page table entry index from the virtual address
-		idx = PAGE_PML_IDX(vaddr, i);
-		if (!table[idx].present){
-			// Next level table does not exist - create one
-			ct = (pm_t *)mem_alloc_align(sizeof(pm_t) * 512);
-			mem_fill((uint8 *)ct, sizeof(pm_t) * 512, 0);
-
-			// Store the physical address
-			table[idx].frame = PAGE_FRAME((uint64)ct);
-			// Set the flags
-			table[idx].present = 1;
-			table[idx].writable = 1;
-			table[idx].write_through = 1;
-			if (mmio){
-				table[idx].cache_disable = 1;
-			}
-			// Continiue with the newly created table
-			table = ct;
-		} else {
-			// Find next level table address
-			table = (pm_t *)PAGE_ADDRESS(table, idx);
-			//debug_print(DC_WB, "Entry: @%x", (uint64)table);
-		}
-	}
-	// Get page index in PML1 table from virtual address 
-	idx = PAGE_PML_IDX(vaddr, 1);
-	// Last level table
-	if (!table[idx].present){
-		// Store physical address
-		table[idx].frame = PAGE_FRAME(paddr);
-		// Set the flags
-		table[idx].present = 1;
-		table[idx].writable = 1;
-		table[idx].write_through = 1;
-		if (mmio){
-			table[idx].cache_disable = 1;
-		}
-		return true;
-	}
-	// Page entry was already present - don't overwrite it
-	return false;
-}
 bool page_release(uint64 vaddr){
 	//TODO: release
 	return true;
@@ -709,8 +727,8 @@ uint64 page_resolve(uint64 vaddr){
 
 uint64 page_alloc(uint64 vaddr, uint64 size){
 	size = PAGE_SIZE_ALIGN(size);
-
-	if (!page_resolve(vaddr)){
+    
+    if (!page_resolve(vaddr)){
 		if (!page_map(vaddr, vaddr)){
 			return 0;	
 		}

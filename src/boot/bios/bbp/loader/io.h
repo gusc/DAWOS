@@ -97,5 +97,32 @@ static uint32 ind(uint16 port){
 	asm volatile("inl %1, %0" : "=a"(ret) : "d"(port));
 	return ret;
 }
+/**
+* Read a string from a specified port one byte at a time
+* @param port - IO port number
+* @param address - target memory address to read into
+* @param count - number of bytes to read
+*/
+static void insb(uint16 port , uint8 *address , int count){
+    asm volatile("cld; rep insb" : "=D" (address), "=c" (count) : "d" (port), "0" (address), "1" (count) : "memory", "cc");
+}
+/**
+* Read a string from a specified port one word at a time
+* @param port - IO port number
+* @param address - target memory address to read into
+* @param count - number of words to read
+*/
+static void insw(uint16 port , uint16 *address , int count){
+    asm volatile("cld; rep insw" : "=D" (address), "=c" (count) : "d" (port), "0" (address), "1" (count) : "memory", "cc");
+}
+/**
+* Read a string from a specified port one dword at a time
+* @param port - IO port number
+* @param address - target memory address to read into
+* @param count - number of dwords to read
+*/
+static void insd(uint16 port , uint32 *address , int count){
+    asm volatile("cld; rep insl" : "=D" (address), "=c" (count) : "d" (port), "0" (address), "1" (count) : "memory", "cc");
+}
 
 #endif

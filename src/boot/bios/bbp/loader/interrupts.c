@@ -159,6 +159,12 @@ static void idt_set_entry(uint8 num, uint64 addr, uint8 flags){
 }
 
 void interrupt_init(){
+    // Disable interrupts
+    interrupt_disable();
+
+    // Initialize PIC
+    pic_init();
+
     mem_fill((uint8 *)&idt, sizeof(idt_entry_t) * 256, 0);
 	mem_fill((uint8 *)&isr_handlers, sizeof(isr_handler_t) * 256, 0);
 	mem_fill((uint8 *)&irq_handlers, sizeof(irq_handler_t) * 16, 0);
@@ -216,6 +222,9 @@ void interrupt_init(){
 	idt_ptr.limit = (sizeof(idt_entry_t) * 256) - 1;
 	idt_ptr.base = (uint64)&idt;
     idt_set(&idt_ptr);
+
+    // Enable interrupts
+    interrupt_enable();
 }
 
 void interrupt_reg_isr_handler(uint64 int_no, isr_handler_t handler){
@@ -263,6 +272,12 @@ void isr_wrapper(isr_stack_t stack){
             debug_print(DC_WRD, "IP: %x", stack.rip);
 			HANG();
 			break;
+        case 8: // Double fault
+#if DEBUG == 1
+			debug_print(DC_WRD, "Error: %x", stack.err_code);
+			debug_print(DC_WRD, "SP: %x", stack.rsp);
+            debug_print(DC_WRD, "IP: %x", stack.rip);
+#endif
 		case 13: // General protection fault
 #if DEBUG == 1
 			debug_print(DC_WRD, "Error: %x", stack.err_code);
@@ -277,6 +292,15 @@ void isr_wrapper(isr_stack_t stack){
 void irq_wrapper(irq_stack_t stack){
     uint8 irq_no = (uint8)stack.irq_no;
     uint16 isr = pic_read_ocw3(PIC_READ_ISR);
+
+    if (irq_no == 2){
+        // Cascaded IRQ
+        if (isr & (1 << irq_no)){
+            pic_eoi(irq_no);
+        }
+        return;
+    }
+    
 	if (irq_handlers[irq_no] != 0){
 		irq_handler_t handler = irq_handlers[irq_no];
 		if (handler(&stack)){

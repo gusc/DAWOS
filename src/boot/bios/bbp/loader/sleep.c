@@ -45,13 +45,16 @@ void isleep(uint64 iter){
 }
 
 void sleep(uint64 time){
-    uint64 counter = (uint16)pit_get_counter();
-    // We assume PIT stays at 1ms for now
-    //uint64 tick_time = 1193180 / counter;
-    //uint64 tick_count = 1000 / time;
+    uint64 counter = (uint64)pit_get_counter();
+    uint64 ticks_per_ms = 1193180 / (counter * 1000);
+    if (ticks_per_ms == 0){
+        // We need at least one tick per ms
+        ticks_per_ms = 1;
+    }
+    uint64 tick_count = time * ticks_per_ms;
     uint64 tick_start = pit_get_ticks();
     uint64 tick = tick_start;
-    while (tick < tick_start + time){
+    while (tick < tick_start + tick_count){
         tick = pit_get_ticks();
     }
 }

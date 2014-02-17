@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "../config.h"
 #include "pit.h"
-#include "pic.h"
 #include "io.h"
 #if DEBUG == 1
     #include "debug_print.h"
@@ -49,15 +48,10 @@ uint8 _mode = 0;
 uint64 _ticks = 0;
 
 void pit_init(){
-    // Disable IRQ0
-    pic_enable(0xFFFE);
     // Initialize PIT to work with 1ms intervals
     pit_set(1193, PIT_MODE_RATE);
     
     interrupt_reg_irq_handler(0, &pit_handler);
-
-    // Re-enable IRQ0
-    pic_enable(0xFFFF);
 }
 uint16 pit_current_count(){
     outb(PIT_CMD, PIT_CMD_LATCH);

@@ -37,33 +37,35 @@
 
 [section .text]
 [bits 64]
-[extern isr_wrapper]							; Import isr_wrapper from C
-[extern irq_wrapper]							; Import irq_wrapper from C
-[global idt_set]								; Export void idt_set(idt_ptr_t *idt) to C
+[extern isr_wrapper]                            ; Import isr_wrapper from C
+[extern irq_wrapper]                            ; Import irq_wrapper from C
+[global idt_set]                                ; Export void idt_set(idt_ptr_t *idt) to C
+[global interrupt_disable]                      ; Export void interrupt_disable() to C
+[global interrupt_enable]                       ; Export void interrupt_enable() to C
 
 ; Macro to create an intterupt service routine for interrupts that do not pass error codes 
 %macro INT_NO_ERR 1
 [global isr%1]
 isr%1:
-	cli											; disable interrupts
-	push qword 0								; set error code to 0
-	push qword %1								; set interrupt number
-	call isr_wrapper							; call void isr_wrapper(int_stack_t stack)
-	sti											; enable interrupts
-	add rsp, 16									; cleanup stack
-	iretq										; return from interrupt handler
+    cli                                         ; disable interrupts
+    push qword 0                                ; set error code to 0
+    push qword %1                               ; set interrupt number
+    call isr_wrapper                            ; call void isr_wrapper(int_stack_t stack)
+    sti                                         ; enable interrupts
+    add rsp, 16                                 ; cleanup stack
+    iretq                                       ; return from interrupt handler
 %endmacro
 
 ; Macro to create an interrupt service routine for interrupts that DO pass an error code
 %macro INT_HAS_ERR 1
 [global isr%1]
 isr%1:
-	cli											; disable interrupts
-	push qword %1								; set interrupt number
-	call isr_wrapper							; call void isr_wrapper(int_stack_t stack)
-	sti											; enable interrupts
-	add rsp, 16									; cleanup stack
-    iretq										; return from interrupt handler
+    cli                                         ; disable interrupts
+    push qword %1                               ; set interrupt number
+    call isr_wrapper                            ; call void isr_wrapper(int_stack_t stack)
+    sti                                         ; enable interrupts
+    add rsp, 16                                 ; cleanup stack
+    iretq                                       ; return from interrupt handler
 %endmacro
 
 ; Macro to create an IRQ interrupt service routine
@@ -72,20 +74,26 @@ isr%1:
 %macro IRQ 2
 [global irq%1]
 irq%1:
-	cli											; disable interrupts
-    push qword %1								; set IRQ number in the place of error code (see registers_t in interrupts.h)
-	push qword %2								; set interrupt number
-	call irq_wrapper							; calls void irq_wrapper(int_stack_t stack)
-	sti											; enable interrupts
-	add rsp, 16									; cleanup stack
-	iretq										; return from interrupt handler
+    cli                                         ; disable interrupts
+    push qword %1                               ; set IRQ number in the place of error code (see registers_t in interrupts.h)
+    push qword %2                               ; set interrupt number
+    call irq_wrapper                            ; calls void irq_wrapper(int_stack_t stack)
+    sti                                         ; enable interrupts
+    add rsp, 16                                 ; cleanup stack
+    iretq                                       ; return from interrupt handler
 %endmacro
 
-idt_set:										; prototype: void idt_set(uint32 idt_ptr)
-	cli											; disable interrupts
-	lidt [rdi]									; load the IDT (x86_64 calling convention - 1st argument goes into RDI)
-	sti											; enable interrupts
-	ret											; return to C
+interrupt_disable:                              ; prototype: void interrupt_disable()
+    cli                                         ; disable interrupts
+    ret                                         ; return to C
+
+interrupt_enable:                               ; prototype: void interrupt_enable()
+    sti                                         ; enable interrupts
+    ret                                         ; return to C
+
+idt_set:                                        ; prototype: void idt_set(uint32 idt_ptr)
+    lidt [rdi]                                  ; load the IDT (x86_64 calling convention - 1st argument goes into RDI)
+    ret                                         ; return to C
 
 ; Setup all the neccessary service routines with macros
 INT_NO_ERR 0
@@ -96,7 +104,7 @@ INT_NO_ERR 4
 INT_NO_ERR 5
 INT_NO_ERR 6
 INT_NO_ERR 7
-INT_NO_ERR 8 ; By all specs int 8 is double fault WITH error message, but not in Bochs, WHY?
+INT_NO_ERR 8                                    ; By all specs int 8 is double fault WITH error message, but not in Bochs, WHY?
 INT_NO_ERR 9
 INT_HAS_ERR 10
 INT_HAS_ERR 11

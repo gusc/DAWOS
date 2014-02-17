@@ -59,6 +59,7 @@ static uint64 _placement_addr;
 extern uint32 placement_addr32;
 
 void mem_init(){
+    _heap = 0;
 	_placement_addr = (uint64)placement_addr32;
 }
 void mem_init_heap(uint64 max_size){
@@ -84,7 +85,7 @@ void *mem_alloc_align(uint64 size){
 	} else {
 		// Align the placement address to the next beginning of the page
 		_placement_addr = PAGE_SIZE_ALIGN(_placement_addr);
-		// Simple placement address allocation
+        // Simple placement address allocation
 		uint64 ptr = _placement_addr;
 		_placement_addr += size;
 		return (void *)ptr;
