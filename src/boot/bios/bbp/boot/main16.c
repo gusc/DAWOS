@@ -7,8 +7,8 @@ This file contains initialization code real mode (preparation to switch to
 protected mode).
 
 It does:
-	* video mode switch
-	* memory mapping
+    * video mode switch
+    * memory mapping
 
 License (BSD-3)
 ===============
@@ -77,25 +77,25 @@ extern uint32 read_e820(e820map_t *mem_map);
 * Initialize Real Mode
 */
 void main16(){
-	// This a static location (see config.h)
-	e820map_t *mem_map = (e820map_t *)E820_LOC;
+    // This a static location (see config.h)
+    e820map_t *mem_map = (e820map_t *)E820_LOC;
 
-	// Setup video mode
+    // Setup video mode
 #if DEBUG == 1
-	#if VIDEOMODE == 1
-	set_video_mode(0x03); // Teletype
-	#elif VIDEOMODE == 2
-	set_svga_mode(0x011B); // 1280x1024 (24 bit) 
-	#endif
+    #if VIDEOMODE == 1
+    set_video_mode(0x03);   // Teletype
+    #elif VIDEOMODE == 2
+    set_svga_mode(0x011B);  // 1280x1024 (24 bit) 
+    #endif
 #endif
 
-	// Enable A20 gate
-	enable_a20();
-	// Read E820 map
-	read_e820(mem_map);
-	
-	// Exit like we want it!
-	// It's uggly, but as we can not control the entry of this function
-	// at least we can control the exit. 
-	RET32();
+    // Enable A20 gate
+    enable_a20();
+    // Read E820 map
+    read_e820(mem_map);
+    
+    // Exit like we want it!
+    // It's uggly, but as we can not control the entry of this function
+    // at least we can control the exit. 
+    RET32();
 }

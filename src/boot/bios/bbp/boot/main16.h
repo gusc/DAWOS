@@ -7,8 +7,8 @@ This file contains initialization code real mode (preparation to switch to
 protected mode).
 
 It does:
-	* video mode switch
-	* memory mapping
+    * video mode switch
+    * memory mapping
 
 License (BSD-3)
 ===============
@@ -49,19 +49,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * E820 memory map entry structure
 */
 struct e820entry_struct {
-	uint16 entry_size;	// if 24, then it has attributes
-	uint64 base;
-	uint64 length;
-	uint32 type;
-	uint32 attributes;	// ACPI 3.0 only
+    uint16 entry_size;  // if 24, then it has attributes
+    uint64 base;
+    uint64 length;
+    uint32 type;
+    uint32 attributes;  // ACPI 3.0 only
 } __PACKED;
 typedef struct e820entry_struct e820entry_t;
 /**
 * E820 memory map structure
 */
 struct e820map_struct {
-	uint16 size;
-	e820entry_t entries[];
+    uint16 size;
+    e820entry_t entries[];
 } __PACKED;
 typedef struct e820map_struct e820map_t;
 

@@ -49,10 +49,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 asm(".code16gcc\n");
 //asm(".code16\n");
 
-#define __INLINE	__attribute__((always_inline))
+#define __INLINE    __attribute__((always_inline))
 #define __NORETURN  __attribute__((noreturn))
-#define __PACKED	__attribute__((packed))
-#define __ALIGN(x)	__attribute__((aligned(x)))
+#define __PACKED    __attribute__((packed))
+#define __ALIGN(x)  __attribute__((aligned(x)))
 
 #define BREAK() asm volatile ("xchg %bx, %bx")
 #define HANG() asm volatile ("int $0x18") // go to BASIC :)
@@ -68,29 +68,30 @@ asm(".code16gcc\n");
 // 16-bit mode so that ret does not do a far jump.
 #define RET32() asm volatile ("\
     leave\n\
-	.code16\n\
-	ret\n\
-	.code16gcc\n");
+    .code16\n\
+    ret\n\
+    .code16gcc\n");
 
 // Default types
-typedef unsigned char	uchar;
+typedef unsigned char       uchar;
 
-typedef unsigned char	uint8;
-typedef unsigned short	uint16;
-typedef unsigned int	uint32;
-typedef unsigned long long uint64;
+typedef unsigned char       uint8;
+typedef unsigned short      uint16;
+typedef unsigned int        uint32;
+typedef unsigned long long  uint64;
 
-typedef char			int8;
-typedef short			int16;
-typedef int				int32;
-typedef long long		int64;
+typedef char                int8;
+typedef short               int16;
+typedef int                 int32;
+typedef long long           int64;
 
-typedef float			float32;
-typedef double			float64;
+typedef float               float32;
+typedef double              float64;
 
-typedef void *handle_t;
-#define null 0
-#define true 1
-#define false 0
+typedef void *              handle_t;
+
+#define null    0
+#define true    1
+#define false   0
 
 #endif /* __common16_h */

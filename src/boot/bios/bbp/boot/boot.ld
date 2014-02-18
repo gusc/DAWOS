@@ -1,19 +1,19 @@
 OUTPUT_FORMAT(elf64-x86-64)
 SECTIONS {
-	.text : {
-		*boot.s.o(.text);
-		*bios.s.o(.text);
-		*main16.o(.text);
-		*(.text);
-	}
-	.rodata : { 
-		*(.rodata);
-	}
-	.data : { 
-		*(.data);
-	}
-	.bss : {
-		*(.bss);
-	}
-	. = ALIGN(4096);
+    .text : {
+        *boot.s.o(.text);
+        *bios.s.o(.text);
+        *main16.o(.text);
+        *(.text);
+    }
+    .rodata : { 
+        *(.rodata);
+    }
+    .data : { 
+        *(.data);
+    }
+    .bss : {
+        *(.bss);
+    }
+    . = ALIGN(4096);
 }

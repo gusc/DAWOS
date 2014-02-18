@@ -45,34 +45,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __common32_h
 #define __common32_h
 
-#define __INLINE	__attribute__((always_inline))
+#define __INLINE    __attribute__((always_inline))
 #define __NORETURN  __attribute__((noreturn))
-#define __PACKED	__attribute__((packed))
-#define __ALIGN(x)	__attribute__((aligned(x)))
+#define __PACKED    __attribute__((packed))
+#define __ALIGN(x)  __attribute__((aligned(x)))
 
 #define BREAK() asm volatile ("xchg %bx, %bx")
 #define HANG() while(true){}
 
 // Default types
-typedef unsigned char	uchar;
+typedef unsigned char       uchar;
 
-typedef unsigned char	uint8;
-typedef unsigned short	uint16;
-typedef unsigned int	uint32;
-typedef unsigned long long uint64;
+typedef unsigned char       uint8;
+typedef unsigned short      uint16;
+typedef unsigned int        uint32;
+typedef unsigned long long  uint64;
 
-typedef char			int8;
-typedef short			int16;
-typedef int				int32;
-typedef long long		int64;
+typedef char                int8;
+typedef short               int16;
+typedef int                 int32;
+typedef long long           int64;
 
-typedef float			float32;
-typedef double			float64;
+typedef float               float32;
+typedef double              float64;
 
-typedef void *handle_t;
-#define null 0
-#define true 1
-#define false 0
-#define bool uint8
+typedef void *              handle_t;
+
+#define null    0
+#define true    1
+#define false   0
+#define bool    uint8
 
 #endif /* __common32_h */

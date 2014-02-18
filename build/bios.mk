@@ -37,19 +37,19 @@ dir := boot/bios/bbp
 include ../src/$(dir)/rules.mk
 
 all: $(TARGETS)
-	
+    
 test:
-	@echo $(OBJ_BOOT)
+    @echo $(OBJ_BOOT)
 
 # Global auto-build commands
 
 %.s.o: %.asm
-	$(AS) $(AF_ALL) -o $@ $<
+    $(AS) $(AF_ALL) -o $@ $<
 
 %.c.o: %.c
-	$(CC) $(CF_ALL) -c $< -o $@
-	
+    $(CC) $(CF_ALL) -c $< -o $@
+    
 # Clean up build space
 
 clean:
-	rm -f $(CLEAN)
+    rm -f $(CLEAN)
