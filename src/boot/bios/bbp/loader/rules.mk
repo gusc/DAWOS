@@ -24,7 +24,7 @@ OBJ_BBP := $(OBJ_BBP) $(TGT_LDR)
 # Local rules
 
 $(TGT_LDR): $(OBJ_LDR)
-    $(LD) $(LF_ALL) -T $(SRC_DIR_LDR)/loader.ld $(OBJ_LDR) -o $(TGT_LDR)
+	$(LD) $(LF_ALL) -T $(SRC_DIR_LDR)/loader.ld $(OBJ_LDR) -o $(TGT_LDR)
 
 # Directory stack POP
 
