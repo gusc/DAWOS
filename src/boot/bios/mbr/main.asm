@@ -30,6 +30,7 @@
 ; Code location constants
 %define ORG_LOC			0x7C00					; Initial MBR position in memory (where BIOS loads it)
 %define BOOT_LOC		0x7E00					; Location of BBP bootcode
+%define BOOT_SEG		0x07E0					; BBP bootcode segment
 
 %define DAP_LOC			0x1000					; DAP location
 %define DATA_LOC		0x1080					; Location of our global data structure in memory
@@ -242,7 +243,6 @@ copy_start:     								; Read bootable partition
 	mov si, DAP_LOC								; set DAP location
 	int	0x13									; call disk interrupt
     jc $										; halt on error
-    xchg bx, bx
     dec cx										; decrement cx for the next iteration
 	cmp cx, 0x0									; test if not the final iteration
 	je .end										; last iteration - pass control over to BBP code
@@ -264,7 +264,7 @@ copy_start:     								; Read bootable partition
 	mov [DAP(lba_start_l)], eax					; set next LBA position
 	jmp .copy_block								; next pass
 .end:
-    jmp 0x0000:BOOT_LOC							; pass control over to BBP code
+    jmp 0x0000:BOOT_LOC                         ; pass control over to BBP code
 copy_end:
 
 padding:										; Zerofill up to 440 bytes

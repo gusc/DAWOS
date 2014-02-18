@@ -43,6 +43,7 @@
 
 ; Definitions:
 %define ORG_LOC		0x7E00						; Initial position in memory (where MBR loads us)
+%define ORG_SEG     0x07E0                      ; Initial code segment
 
 [section .text]
 [global start16]								; Export start16 to linker
@@ -69,20 +70,31 @@ start16:										; Boot entry point
 	mov ss, ax									; zero out stack segment register (SS)
 	mov fs, ax									; zero out general purpose data segment register (FS)
 	mov gs, ax									; zero out general purpose data segment register (FS)
-	mov sp, ORG_LOC								; set stack pointer to the begining of MBR location in memory
+	mov sp, ORG_LOC						        ; set stack pointer to the begining of MBR location in memory
 
 	; Call Real Mode initialization
 	cli											; disable all maskable interrupts
-	call main16									; call C function main16() (see: boot/main16.c)
+	call main16							        ; call C function main16() (see: boot/main16.c)
 
 	; Enter Protected mode
-	lgdt [gdt32_ptr]							; load 32bit GDT pointer
-	
+    mov eax, gdt32_ptr;                         ; if the gdt32_ptr is outside 16bit addressing bounds
+                                                ; we need to do some segment calculation magic
+    mov ebx, eax                                ; copy gdt32_ptr to ebx
+    and eax, 0xFFFF                             ; clear the upper word of eax
+    shr ebx, 16                                 ; shift ebx right by 16 bits
+    and ebx, 0xFFFF                             ; clear the upper word of ebx
+    shl ebx, 12                                 ; shift left by 12 bits, so that it aligns with segment
+                                                ; addressing formula - (ds << 4) + m16 = physical address
+    mov ds, bx                                  ; set data segment
+    lgdt [eax]							        ; load 32bit GDT pointer
+    xor ebx, ebx                                ; clear ebx
+    mov ds, bx                                  ; reset data segment
+
 	mov eax, cr0								; read from CR0
 	or eax, 0x00000001							; set Protected Mode bit
 	mov cr0, eax								; write to CR0
-	
-	jmp 0x08:start32							; do the magic jump to finalize Protected Mode setup
+
+	jmp dword 0x08:start32					    ; do the magic jump to finalize Protected Mode setup
 
 [bits 32]										; Protected mode
 

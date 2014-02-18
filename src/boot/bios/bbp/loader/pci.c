@@ -115,6 +115,7 @@ void pci_init(){
 	addr.raw = 0x80000000;
 
 	_cache = (pci_cache_t *)mem_alloc(sizeof(pci_cache_t *) * 256);
+    _cache_len = 0;
 
 	// Recursive scan - thanks OSDev Wiki
 	pci_get_header(&header, addr);

@@ -64,35 +64,45 @@ void main64(){
 #endif
 
     // Disable interrupts
+    debug_print(DC_WB, "Disable interrupts");
     interrupt_disable();
     // Initialize memory manager
+    debug_print(DC_WB, "Memory init");
     mem_init();
     // Initialize PIC
+    debug_print(DC_WB, "PIC init");
     pic_init();
     // Initialize interrupts
+    debug_print(DC_WB, "Interrupt init");
     interrupt_init();
     // Initialize paging (well, actually re-initialize)
+    debug_print(DC_WB, "Page init");
     page_init();
     // Initialize kernel heap allocator
+    debug_print(DC_WB, "Heap init");
     mem_init_heap(HEAP_MAX_SIZE);
     // Initialize PIT
+    debug_print(DC_WB, "PIT init");
     pit_init();
     // Enable all IRQs
+    debug_print(DC_WB, "Enable IRQs");
     pic_enable(0xFFFF);
     // Enable interrupts
+    debug_print(DC_WB, "Enable interrupts");
     interrupt_enable();
     // Initialize PCI
+    debug_print(DC_WB, "PCI init");
     pci_init();
 	// Initialize ATA
-    debug_print(DC_WB, "ATA Init");
-    ata_init();
+    //debug_print(DC_WB, "ATA init");
+    //ata_init();
 	// Initialize AHCI
-    debug_print(DC_WB, "AHCI Init");
+    debug_print(DC_WB, "AHCI init");
     if (ahci_init()){
 #if DEBUG == 1
 		ahci_list();
 #endif
-/*
+
 		uint8 *mem = (uint8 *)mem_alloc_clean(512);
 		uint64 dev_count = ahci_num_dev();
 		uint64 y = 23;
@@ -113,7 +123,6 @@ void main64(){
 				debug_print(DC_WB, "Read failed");
 			}
 		}
-*/
 	}
     
 #if DEBUG == 1

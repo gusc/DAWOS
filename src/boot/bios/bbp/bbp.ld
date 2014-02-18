@@ -3,7 +3,7 @@ OUTPUT_FORMAT(binary)
 ENTRY(start16)
 SECTIONS {
 	.text 0x7E00 : AT( 0x7E00 ) {
-		*boot.o(.text); 
+		*boot.o(.text);
 		*(.text);
 	}
 	.rodata : {

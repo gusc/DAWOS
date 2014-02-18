@@ -66,7 +66,8 @@ asm(".code16gcc\n");
 // If we use .code16gcc then all ret and leave functions behave as in 32bit mode,
 // so right after leave (which is 0x66 prefixed) we do a magic switch to 
 // 16-bit mode so that ret does not do a far jump.
-#define RET32() asm volatile ("leave\n\
+#define RET32() asm volatile ("\
+    leave\n\
 	.code16\n\
 	ret\n\
 	.code16gcc\n");
