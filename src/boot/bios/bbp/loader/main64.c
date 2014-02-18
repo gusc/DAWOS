@@ -47,9 +47,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "pic.h"
 #include "ata.h"
 #include "ahci.h"
+#include "sleep.h"
 #if DEBUG == 1
 	#include "debug_print.h"
 #endif
+
+extern uint32 _checksum;
+extern uint64 _end;
 
 /**
 * Loader entry point
@@ -62,72 +66,86 @@ void main64(){
 	// Show something on the screen
 	debug_print(DC_WB, "Booting...");
 #endif
+    uint64 check = (uint64)(&_checksum);
+    if (check == 0xF00BAA){
+        debug_print(DC_WB, "Bootloader: 0x7E00 - 0x%x", (uint64)&_end);
 
-    // Disable interrupts
-    debug_print(DC_WB, "Disable interrupts");
-    interrupt_disable();
-    // Initialize memory manager
-    debug_print(DC_WB, "Memory init");
-    mem_init();
-    // Initialize PIC
-    debug_print(DC_WB, "PIC init");
-    pic_init();
-    // Initialize interrupts
-    debug_print(DC_WB, "Interrupt init");
-    interrupt_init();
-    // Initialize paging (well, actually re-initialize)
-    debug_print(DC_WB, "Page init");
-    page_init();
-    // Initialize kernel heap allocator
-    debug_print(DC_WB, "Heap init");
-    mem_init_heap(HEAP_MAX_SIZE);
-    // Initialize PIT
-    debug_print(DC_WB, "PIT init");
-    pit_init();
-    // Enable all IRQs
-    debug_print(DC_WB, "Enable IRQs");
-    pic_enable(0xFFFF);
-    // Enable interrupts
-    debug_print(DC_WB, "Enable interrupts");
-    interrupt_enable();
-    // Initialize PCI
-    debug_print(DC_WB, "PCI init");
-    pci_init();
-	// Initialize ATA
-    //debug_print(DC_WB, "ATA init");
-    //ata_init();
-	// Initialize AHCI
-    debug_print(DC_WB, "AHCI init");
-    if (ahci_init()){
+        // Disable interrupts
+        debug_print(DC_WB, "Disable interrupts");
+        interrupt_disable();
+        // Initialize memory manager
+        debug_print(DC_WB, "Memory init");
+        mem_init();
+        // Initialize PIC
+        debug_print(DC_WB, "PIC init");
+        pic_init();
+        // Initialize interrupts
+        debug_print(DC_WB, "Interrupt init");
+        interrupt_init();
+        // Initialize paging (well, actually re-initialize)
+        debug_print(DC_WB, "Page init");
+        page_init();
+        // Initialize kernel heap allocator
+        debug_print(DC_WB, "Heap init");
+        mem_init_heap(HEAP_MAX_SIZE);
+        // Initialize PIT
+        debug_print(DC_WB, "PIT init");
+        pit_init(PIT_COUNTER);
+        // Enable all IRQs
+        debug_print(DC_WB, "Enable IRQs");
+        pic_enable(0xFFFE);
+        // Enable interrupts (Do it after PCI, otherwise it seems to GPF at random)
+        debug_print(DC_WB, "Enable interrupts");
+        interrupt_enable();
+            
+        // Initialize PCI
+        debug_print(DC_WB, "PCI init");
+        if (pci_init()){
 #if DEBUG == 1
-		ahci_list();
+		    //pci_list();
 #endif
-
-		uint8 *mem = (uint8 *)mem_alloc_clean(512);
-		uint64 dev_count = ahci_num_dev();
-		uint64 y = 23;
-		if (dev_count > 0){
-            if (ahci_id(0, mem)){
-                debug_print(DC_WB, "ID OK");
-                debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
-            } else {
-                debug_print(DC_WB, "ID failed");
-            }
-            mem_fill(mem, 512, 0);
-			if (ahci_read(0, 0, mem, 512)){
-				debug_print(DC_WB, "Read:");
-				for (y = 0; y < 64; y += 8){
-					debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
-				}
-			} else {
-				debug_print(DC_WB, "Read failed");
-			}
-		}
-	}
-    
+	        // Initialize ATA
+            debug_print(DC_WB, "ATA init");
+            ata_init();
+	        // Initialize AHCI
+            debug_print(DC_WB, "AHCI init");
+        
+            //if (ahci_init()){
 #if DEBUG == 1
-	debug_print(DC_WB, "Done");
+		        //ahci_list();
 #endif
+            /*
+		        uint8 *mem = (uint8 *)mem_alloc_clean(512);
+		        uint64 dev_count = ahci_num_dev();
+		        uint64 y = 23;
+		        if (dev_count > 0){
+                    if (ahci_id(0, mem)){
+                        debug_print(DC_WB, "ID OK");
+                        debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
+                    } else {
+                        debug_print(DC_WB, "ID failed");
+                    }
+                    mem_fill(mem, 512, 0);
+			        if (ahci_read(0, 0, mem, 512)){
+				        debug_print(DC_WB, "Read:");
+				        for (y = 0; y < 64; y += 8){
+					        debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
+				        }
+			        } else {
+				        debug_print(DC_WB, "Read failed");
+			        }
+                }
+            */
+	        //}
+        }
+#if DEBUG == 1
+	    debug_print(DC_WB, "Done");
+#endif
+    } else {
+#if DEBUG == 1
+	    debug_print(DC_WB, "Wrong checksum");
+#endif
+    }
 	// Infinite loop
 	while(true){}
 }

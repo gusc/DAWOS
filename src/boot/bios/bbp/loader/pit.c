@@ -46,14 +46,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 uint16 _counter = 0;
 uint8 _mode = 0;
 uint64 _ticks = 0;
+bool _tick_update = false;
 
-void pit_init(){
+void pit_init(uint16 pit_counter){
     _counter = 0;
     _mode = 0;
     _ticks = 0;
+    _tick_update = false;
 
     // Initialize PIT to work with 1ms intervals
-    pit_set(1193, PIT_MODE_RATE);
+    pit_set(pit_counter, PIT_MODE_RATE);
     
     interrupt_reg_irq_handler(0, &pit_handler);
 }
@@ -68,7 +70,13 @@ uint8 pit_get_mode(){
     return _mode;
 }
 uint64 pit_get_ticks(){
-    return _ticks;
+    while (_tick_update){
+        // Wait
+    }
+    interrupt_disable();
+    uint64 t = _ticks;
+    interrupt_enable();
+    return t;
 }
 void pit_reset(){
     uint8 cmd = PIT_CMD_RELOAD;
@@ -91,6 +99,11 @@ void pit_set(uint16 counter, uint8 mode){
     pit_reset();
 }
 uint64 pit_handler(irq_stack_t *stack){
-    _ticks ++;
+    _tick_update = true;
+    uint64 t = _ticks;
+    t ++;
+    _ticks = t;
+    _tick_update= false;
+    //debug_print_at(60, 2, DC_WB, "PIT %d", t);
     return 0;
 }

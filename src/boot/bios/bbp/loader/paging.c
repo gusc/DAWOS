@@ -497,9 +497,9 @@ bool page_id_map(uint64 paddr, uint64 vaddr, bool mmio){
 			table[idx].present = 1;
 			table[idx].writable = 1;
             table[idx].write_through = 1;
-			if (mmio){
+			//if (mmio){
 				table[idx].cache_disable = 1;
-			}
+			//}
 			// Continiue with the newly created table
 			table = ct;
 		} else {
@@ -516,10 +516,10 @@ bool page_id_map(uint64 paddr, uint64 vaddr, bool mmio){
 		// Set the flags
 		table[idx].present = 1;
 		table[idx].writable = 1;
-		if (mmio){
-            table[idx].write_through = 1;
-			table[idx].cache_disable = 1;
-		}
+        table[idx].write_through = 1;			
+		//if (mmio){
+            table[idx].cache_disable = 1;
+		//}
         // Invalidate page
         page_invalidate(vaddr);
 		return true;

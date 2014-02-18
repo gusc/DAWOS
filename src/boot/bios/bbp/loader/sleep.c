@@ -34,8 +34,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+#include "../config.h"
 #include "sleep.h"
 #include "pit.h"
+#if DEBUG == 1
+	#include "debug_print.h"
+#endif
 
 void isleep(uint64 iter){
 	uint32 x = 1;
@@ -46,7 +50,7 @@ void isleep(uint64 iter){
 
 void sleep(uint64 time){
     uint64 counter = (uint64)pit_get_counter();
-    uint64 ticks_per_ms = 1193180 / (counter * 1000);
+    uint64 ticks_per_ms = PIT_FREQ / (counter * 1000);
     if (ticks_per_ms == 0){
         // We need at least one tick per ms
         ticks_per_ms = 1;
@@ -56,5 +60,14 @@ void sleep(uint64 time){
     uint64 tick = tick_start;
     while (tick < tick_start + tick_count){
         tick = pit_get_ticks();
+        NOP();
+        NOP();
+        NOP();
+        NOP();
+        NOP();
+        NOP();
+        NOP();
+        NOP();
     }
+    //debug_print(DC_WB, "Sleep - s: %d, e: %d, t: %d", tick_start, tick, tick_count);
 }

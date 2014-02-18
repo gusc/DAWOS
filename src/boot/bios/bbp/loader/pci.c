@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "io.h"
 #include "pci.h"
 #include "memory.h"
+#include "paging.h"
 #if DEBUG == 1
 	#include "debug_print.h"
 #endif
@@ -108,18 +109,18 @@ static uint16 pci_get_secondary_bus(uint16 bus, uint8 device, uint8 function){
 	return bus;
 }
 
-void pci_init(){
+bool pci_init(){
 	uint16 bus = 0;
 	pci_header_t header;
 	pci_addr_t addr;
 	addr.raw = 0x80000000;
 
-	_cache = (pci_cache_t *)mem_alloc(sizeof(pci_cache_t *) * 256);
+    _cache = (pci_cache_t *)mem_alloc_clean(sizeof(pci_cache_t *) * 256);
     _cache_len = 0;
 
 	// Recursive scan - thanks OSDev Wiki
 	pci_get_header(&header, addr);
-	if ((header.type & 0x80) != 0){
+    if ((header.type & 0x80) != 0){
 		// Multiple PCI host controllers
 		for (bus = 0; bus < 8; bus ++){
 			addr.s.bus = bus;
@@ -133,6 +134,11 @@ void pci_init(){
 		// Single PCI host controller
 		pci_enum_bus(0);
 	}
+
+    if (_cache_len > 0){
+        return true;
+    }
+    return false;
 }
 
 uint8 pci_num_device(uint8 class_id, uint8 subclass_id){
@@ -162,7 +168,7 @@ pci_addr_t pci_get_device(uint8 class_id, uint8 subclass_id, uint8 idx){
 	return addr_none;
 }
 
-void pci_get_header(pci_header_t *header,pci_addr_t addr){
+void pci_get_header(pci_header_t *header, pci_addr_t addr){
 	uint32 *rows = (uint32 *)header;
 	uint8 row;
 	for (row = 0; row < 4; row ++){

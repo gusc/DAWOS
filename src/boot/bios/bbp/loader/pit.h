@@ -59,7 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
 * Initialize PIT
 */
-void pit_init();
+void pit_init(uint16 pit_counter);
 /**
 * Read the current PIT counter value
 * @return status

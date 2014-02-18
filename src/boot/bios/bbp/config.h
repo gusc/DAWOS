@@ -72,6 +72,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Maximum heap size (50MB for now)
 #define HEAP_MAX_SIZE 0x3200000
 
+// PIT counter settings
+#define PIT_FREQ 1193180
+#define PIT_COUNTER 1193
+
 #if VIDEOMODE == 1
 	// Teletype video memory location
 	// This can be used only in 32+ bit modes

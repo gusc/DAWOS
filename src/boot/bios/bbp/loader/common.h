@@ -53,6 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __ALIGN(x)	__attribute__((aligned(x)))
 
 #define BREAK() asm volatile ("xchg %bx, %bx")
+#define NOP() asm volatile ("nop")
 #define HANG() while(true){}
 
 // Default types

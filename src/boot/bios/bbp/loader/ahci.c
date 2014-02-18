@@ -71,7 +71,7 @@ static void ahci_init_port(ahci_hba_t *hba, pci_device_t *dev){
 	for (i = 0; i < 32; i ++){
 		if (ports & 1) {
 			dev_type = ahci_get_type(&hba->ports[i]);
-			switch (dev_type){
+            switch (dev_type){
 				case AHCI_DEV_SATA:
 				case AHCI_DEV_SATAPI:
 				case AHCI_DEV_SEMB:
@@ -109,16 +109,25 @@ bool ahci_init(){
 	if (dev_count > 0){
 		for (i = 0; i < dev_count; i ++){
 			pci_addr_t addr = pci_get_device(0x1, 0x6, i);
+            debug_print(DC_WB, "PCI addr: %x", addr.raw);
 			if (addr.raw != 0){
 				// Get AHCI controller configuration
 				pci_get_config(dev, addr);
 				// Get ABAR (AHCI Base Address)
 				abar = ((uint64)(dev->bar[5])) & AHCI_HBA_MASK;
-				// Map the page
+                // Map the page
 				for (offset = 0; offset < AHCI_HBA_SIZE; offset += PAGE_SIZE){
 					page_map_mmio(abar + offset, abar + offset);
 				}
 				hba = (ahci_hba_t *)abar;
+
+                debug_print(DC_WB, "SATA controller at %u:%u", addr.s.bus, addr.s.device);
+	            debug_print(DC_WB, "     ABAR:0x%x", abar);
+	            debug_print(DC_WB, "     Num Ports:%d", hba->cap.np + 1);
+	            debug_print(DC_WB, "     Num Commands:%d", hba->cap.ncs + 1);
+	            debug_print(DC_WB, "     Version:%x", hba->vs);
+	
+
 				//if (hba->cap.s64a == 1){
 					ahci_init_port(hba, dev);
 				//}
@@ -160,6 +169,7 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
 		}
 
 		ahci_hba_cmd_header_t *cmd = (ahci_hba_cmd_header_t *)port->clb;
+        page_map_mmio((uint64)cmd, (uint64)cmd);
 		cmd += slot;
 		cmd->desc.cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32);			// Command FIS size
 		cmd->desc.w = 0;												// Read from device
@@ -167,6 +177,7 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
 		cmd->desc.prdtl = (uint16)((len - 1) / AHCI_BLOCK_SIZE) + 1;	// PRDT entries count
 
 		ahci_hba_cmd_tbl_t *tbl = (ahci_hba_cmd_tbl_t *)cmd->ctba;
+        page_map_mmio((uint64)tbl, (uint64)tbl);
 		mem_fill((uint8 *)tbl, sizeof(ahci_hba_cmd_tbl_t) + ((cmd->desc.prdtl - 1) * sizeof(ahci_hba_prdt_entry_t)), 0);
 
 		uint64 i = 0;
@@ -186,6 +197,7 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
  
 		// Setup command
 		fis_reg_h2d_t *fis = (fis_reg_h2d_t *)(tbl->cfis);
+        page_map_mmio((uint64)fis, (uint64)fis);
 		fis->fis_type = FIS_TYPE_REG_H2D;
 		fis->cmd = 1;						// Command
 		fis->command = ATA_CMD_READ_DMA_EX;

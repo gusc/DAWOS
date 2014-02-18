@@ -19,4 +19,6 @@ SECTIONS {
 		*(.eh_frame);
 	}
 	. = ALIGN(4096);
+    _checksum = 0xF00BAA;
+    _end = .;
 }

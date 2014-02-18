@@ -60,7 +60,7 @@ typedef union {
 		uint32 bus		: 8; // Bus number
 		uint32 reserved	: 7; // Reserved
 		uint32 enabled	: 1; // Enabled bit
-	} s;
+	} __PACKED s;
 	uint32 raw;
 } pci_addr_t;
 /**
@@ -79,7 +79,7 @@ typedef volatile struct {
 	uint8 latency_timer;
 	uint8 type;
 	uint8 bist;
-} pci_header_t;
+} __PACKED pci_header_t;
 /**
 * Standard PCI device configuration space structure
 */
@@ -96,12 +96,12 @@ typedef volatile struct {
 	uint8 int_pin;
 	uint8 min_grant;
 	uint8 max_latency;
-} pci_device_t;
+} __PACKED pci_device_t;
 
 /**
 * Enumerate PCI bus
 */
-void pci_init();
+bool pci_init();
 /**
 * Get the number of devices represented by a class and subclass
 * @param class_id - class code
