@@ -48,6 +48,10 @@ uint8 _mode = 0;
 uint64 _ticks = 0;
 
 void pit_init(){
+    _counter = 0;
+    _mode = 0;
+    _ticks = 0;
+
     // Initialize PIT to work with 1ms intervals
     pit_set(1193, PIT_MODE_RATE);
     

@@ -159,13 +159,8 @@ static void idt_set_entry(uint8 num, uint64 addr, uint8 flags){
 }
 
 void interrupt_init(){
-    // Disable interrupts
-    interrupt_disable();
-
-    // Initialize PIC
-    pic_init();
-
     mem_fill((uint8 *)&idt, sizeof(idt_entry_t) * 256, 0);
+    mem_fill((uint8 *)&idt_ptr, sizeof(idt_ptr_t), 0);
 	mem_fill((uint8 *)&isr_handlers, sizeof(isr_handler_t) * 256, 0);
 	mem_fill((uint8 *)&irq_handlers, sizeof(irq_handler_t) * 16, 0);
 
@@ -222,9 +217,6 @@ void interrupt_init(){
 	idt_ptr.limit = (sizeof(idt_entry_t) * 256) - 1;
 	idt_ptr.base = (uint64)&idt;
     idt_set(&idt_ptr);
-
-    // Enable interrupts
-    interrupt_enable();
 }
 
 void interrupt_reg_isr_handler(uint64 int_no, isr_handler_t handler){

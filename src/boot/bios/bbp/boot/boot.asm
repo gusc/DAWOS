@@ -42,7 +42,7 @@
 ;
 
 ; Definitions:
-%define ORG_LOC		0x5000						; Initial position in memory (where MBR loads us)
+%define ORG_LOC		0x7E00						; Initial position in memory (where MBR loads us)
 
 [section .text]
 [global start16]								; Export start16 to linker

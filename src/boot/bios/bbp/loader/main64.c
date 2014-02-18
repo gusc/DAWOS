@@ -44,7 +44,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "memory.h"
 #include "pci.h"
 #include "pit.h"
+#include "pic.h"
 #include "ata.h"
+#include "ahci.h"
 #if DEBUG == 1
 	#include "debug_print.h"
 #endif
@@ -61,8 +63,12 @@ void main64(){
 	debug_print(DC_WB, "Booting...");
 #endif
 
+    // Disable interrupts
+    interrupt_disable();
     // Initialize memory manager
     mem_init();
+    // Initialize PIC
+    pic_init();
     // Initialize interrupts
     interrupt_init();
     // Initialize paging (well, actually re-initialize)
@@ -71,13 +77,45 @@ void main64(){
     mem_init_heap(HEAP_MAX_SIZE);
     // Initialize PIT
     pit_init();
-    
+    // Enable all IRQs
+    pic_enable(0xFFFF);
+    // Enable interrupts
+    interrupt_enable();
     // Initialize PCI
     pci_init();
 	// Initialize ATA
-    debug_print(DC_WB, "ATA");
+    debug_print(DC_WB, "ATA Init");
     ata_init();
-	
+	// Initialize AHCI
+    debug_print(DC_WB, "AHCI Init");
+    if (ahci_init()){
+#if DEBUG == 1
+		ahci_list();
+#endif
+/*
+		uint8 *mem = (uint8 *)mem_alloc_clean(512);
+		uint64 dev_count = ahci_num_dev();
+		uint64 y = 23;
+		if (dev_count > 0){
+            if (ahci_id(0, mem)){
+                debug_print(DC_WB, "ID OK");
+                debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
+            } else {
+                debug_print(DC_WB, "ID failed");
+            }
+            mem_fill(mem, 512, 0);
+			if (ahci_read(0, 0, mem, 512)){
+				debug_print(DC_WB, "Read:");
+				for (y = 0; y < 64; y += 8){
+					debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
+				}
+			} else {
+				debug_print(DC_WB, "Read failed");
+			}
+		}
+*/
+	}
+    
 #if DEBUG == 1
 	debug_print(DC_WB, "Done");
 #endif

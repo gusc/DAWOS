@@ -53,6 +53,84 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * @return aligned address
 */
 #define PAGE_SIZE_ALIGN(n) ((n + PAGE_IMASK) & PAGE_MASK)
+// Magic number used in heap blocks for sanity checks
+#define PAGE_MAGIC 0xFFFFDEADBEEFFFFF
+// Segeregate list min size
+#define PAGE_LIST_MIN 1
+// Segeregate list max size
+#define PAGE_LIST_MAX 32
+// Segregated list count
+#define PAGE_LIST_COUNT (PAGE_LIST_MAX - PAGE_LIST_MIN)
+// Make virtual address canonical (sign extend)
+#define PAGE_CANONICAL(va) ((va << 16) >> 16)
+// Page table entry index mask
+#define PAGE_PML_IDX_MASK 0x1FF
+// Page offset mask
+#if PAGE_LEVELS == 2
+	#define PAGE_OFFSET_MASK   0x3FFFFF
+#elif PAGE_LEVELS == 3
+	#define PAGE_OFFSET_MASK   0x1FFFFF
+#else
+	#define PAGE_OFFSET_MASK   0xFFF
+#endif
+// Page frame mask (40bits shifter 12bits left)
+#define PAGE_FRAME_MASK 0xFFFFFFFFFF000
+
+/**
+* E820 memory map entry structure
+*/
+struct e820entry_struct {
+	uint16 entry_size;	// if 24, then it has attributes
+	uint64 base;
+	uint64 length;
+	uint32 type;
+	uint32 attributes;	// ACPI 3.0 only
+} __PACKED;
+typedef struct e820entry_struct e820entry_t;
+/**
+* E820 memory map structure
+*/
+struct e820map_struct {
+	uint16 size;
+	e820entry_t entries[];
+} __PACKED;
+typedef struct e820map_struct e820map_t;
+
+/**
+* Page table entry structure
+*/
+typedef struct {
+	uint64 present			: 1;	// Is the page present in memory?
+	uint64 writable			: 1;	// Is the page writable?
+	uint64 user				: 1;	// Is the page for userspace?
+	uint64 write_through	: 1;	// Do we want write-trough? (when cached, this also writes to memory)
+	uint64 cache_disable	: 1;	// Disable cache on this page?
+	uint64 accessed			: 1;	// Has the page been accessed by software?
+	uint64 dirty			: 1;	// Has the page been written to since last refresh? (ignored in PML4E, PML3E, PML2E)
+	uint64 pat				: 1;	// Page attribute table (in PML1E), 
+									// page size bit (must be 0 in PML4E, in PML3E 1 = 1GB page size, in PML2E 1 = 2MB page size otherwise 4KB pages are used)
+	uint64 global			: 1;	// Is the page global? (ignored in PML4E, PML3E, PML2E)
+	uint64 data				: 3;	// Ignored (ignored in all PML levels)
+	uint64 frame			: 40;	// Frame address (4KB aligned)
+	uint64 data2			: 11;	// Ignored (ignored in all PML levels)
+	uint64 xd				: 1;	// Execute disable bit (whole region is not accessible by instruction fetch)
+} pm_t;
+/**
+* Page block header structure
+*/
+struct page_header_struct {
+	uint64 magic;
+	uint64 size;
+} __PACKED;
+typedef struct page_header_struct page_header_t;
+/**
+* Heap block footer structure
+*/
+struct page_footer_struct {
+	uint64 magic;
+	page_header_t *header;
+} __PACKED;
+typedef struct page_footer_struct page_footer_t;
 
 /**
 * Initialize paging
