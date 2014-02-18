@@ -107,8 +107,12 @@ struct heap_struct {
 	uint64 start_addr;							// Start address of the heap
 	uint64 end_addr;							// End address of the heap
 	uint64 max_addr;							// Maximum address of the heap
+    struct {
+        uint64 locked               :1;         // Heap is locked
+        uint64 reserved             :63;
+    } flags;
 	heap_header_t *free[HEAP_LIST_COUNT + 1];	// Free block list + tree in the last item
-} __ALIGN(16);
+} __PACKED;
 typedef struct heap_struct heap_t;
 
 /**

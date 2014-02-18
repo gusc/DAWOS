@@ -608,8 +608,8 @@ uint64 page_fault(isr_stack_t *stack){
     if (stack->err_code & 0x10){
         debug_print(DC_WRD, "  i-fetch");
     }
-	debug_print(DC_WRD, "Error: %x", stack->err_code);
-	debug_print(DC_WRD, "Addr: @%x", fail_addr);
+	debug_print(DC_WRD, "Error: %x", (uint64)stack->err_code);
+	debug_print(DC_WRD, "Addr: @%x", (uint64)fail_addr);
 #endif
     
 	// Map this page if it's not mapped yet, otherwise hang

@@ -247,7 +247,7 @@ gdt64:
     dw 0x0000                                       ; 0:15 - Limit
     dw 0x0000                                       ; 16:31 - Base (low word)
     db 0x00                                         ; 32:39 - Base (high word low byte)
-    ;  P|DPL|DPL|1|1|C|R|A
+    ;  P|DPL|DT|1|1|C|R|A
     db 10011100b                                    ; 40:47 - Access byte
     ;  G|D|L|AVL|0|0|0|0
     db 00100000b                                    ; 48:55 - Limit (high nibble) + Flags (4 bits) 

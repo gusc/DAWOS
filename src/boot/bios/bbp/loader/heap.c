@@ -164,6 +164,17 @@ struct free_node_struct {
 */
 #define HEAP_SET_USED(h, u) (((heap_size_t *)&h->size)->used = u)
 
+static void heap_wait_lock(heap_t *heap){
+    uint64 i = 0;
+    while (heap->flags.locked){
+        i ++;
+    }
+    heap->flags.locked = 1;
+}
+static void heap_unlock(heap_t *heap){
+    heap->flags.locked = 0;
+}
+
 /**
 * Insert a free block into a sorted list
 * @param tree - a pointer to a root of the search tree
@@ -310,7 +321,10 @@ static void heap_tree_delete(free_node_t **tree, heap_header_t *block){
 static heap_header_t *heap_tree_search(free_node_t **tree, uint64 psize, bool align){
 	uint64 usize = HEAP_USIZE(psize);
 	free_node_t *free_block = (*tree);
-
+    // Return - there's nothing to search into
+    if (free_block == 0){
+        return 0;
+    }
 	// Move our search pointer to the first suitable entry
 	if (HEAP_GET_USIZE(free_block) < usize){
 		while (free_block != 0 && HEAP_GET_USIZE(free_block) < usize){
@@ -325,6 +339,9 @@ static heap_header_t *heap_tree_search(free_node_t **tree, uint64 psize, bool al
 			}
 		}
 	}
+    if (free_block == 0){
+        return 0;
+    }
 	if (!align){
 		// We might have found something for an unaligned request (it might be 0 too)
 		return (heap_header_t *)free_block;
@@ -503,7 +520,7 @@ static void heap_remove(heap_t *heap, heap_header_t *block){
 		free_block->prev_block = 0;
 	} else {
 		// List does not accept it - delete it from the tree
-		heap_tree_delete((free_node_t **)&heap->free[HEAP_LIST_COUNT], block);
+		heap_tree_delete((free_node_t **)(&(heap->free[HEAP_LIST_COUNT])), block);
 	}
 }
 /**
@@ -527,7 +544,7 @@ static void heap_insert(heap_t *heap, heap_header_t *block){
 		heap->free[list_idx] = (heap_header_t *)free_block;
 	} else {
 		// List does not accept it - insert it into the tree
-		heap_tree_insert((free_node_t **)&heap->free[HEAP_LIST_COUNT], block);
+		heap_tree_insert((free_node_t **)(&(heap->free[HEAP_LIST_COUNT])), block);
 	}
 }
 /**
@@ -536,9 +553,9 @@ static void heap_insert(heap_t *heap, heap_header_t *block){
 * @return same block or the left one merged with the one you passed
 */
 static heap_header_t * heap_merge_left(heap_t *heap, heap_header_t *block){
-	if (((uint64)block) > heap->start_addr){
+	if (((uint64)block) > heap->start_addr + sizeof(heap_t)){
 		heap_footer_t *prev_footer = (heap_footer_t *)(((uint8 *)block) - sizeof(heap_footer_t));
-		if (HEAP_CHECK_FOOTER(prev_footer) && HEAP_GET_USED(prev_footer->header) == 0){
+        if (HEAP_CHECK_FOOTER(prev_footer) && HEAP_GET_USED(prev_footer->header) == 0){
 			// Merge left
 			heap_header_t *free_left = (heap_header_t *)HEAP_GET_HEADER(prev_footer);
 			// Remove the right block
@@ -602,6 +619,8 @@ heap_t * heap_create(uint64 start, uint64 size, uint64 max_size){
 	heap->start_addr = start;
 	heap->end_addr = start + size;
 	heap->max_addr = start + max_size;
+    heap->flags.locked = 0;
+    heap->flags.reserved = 0;
 
 	// Initialize free lists
 	uint8 i = 0;
@@ -619,7 +638,8 @@ heap_t * heap_create(uint64 start, uint64 size, uint64 max_size){
 }
 
 void *heap_alloc(heap_t * heap, uint64 psize, bool align){
-	heap_header_t *free_block = 0;
+	heap_wait_lock(heap);
+    heap_header_t *free_block = 0;
 
 	// Align the requested size to heap alignament
 	psize = HEAP_ALIGN(psize);
@@ -672,8 +692,10 @@ void *heap_alloc(heap_t * heap, uint64 psize, bool align){
 		// Mark used in header
 		HEAP_SET_USED(free_block, 1);
 		// Return a pointer to the payload
+        heap_unlock(heap);
 		return (void *)HEAP_GET_PAYLOAD(free_block);
 	}
+    heap_unlock(heap);
 	return 0;
 }
 
@@ -684,9 +706,11 @@ void *heap_realloc(heap_t * heap, void *ptr, uint64 psize, bool align){
 		return ptr;
 	} else {
 		// This is easy :)
-		void *ptr_new = heap_alloc(heap, psize, align);
+		heap_wait_lock(heap);
+        void *ptr_new = heap_alloc(heap, psize, align);
 		mem_copy((uint8 *)ptr_new, psize_now, (uint8 *)ptr);
 		heap_free(heap, ptr);
+        heap_unlock(heap);
 		return ptr_new;
 	}
 }
@@ -695,6 +719,7 @@ void heap_free(heap_t * heap, void *ptr){
 	if (ptr != 0){
 		heap_header_t *free_block = (heap_header_t *)HEAP_PAYLOAD_HEADER(ptr);
 		if (HEAP_CHECK_HEADER(free_block)){
+            heap_wait_lock(heap);
 			// Clear used in header
 			HEAP_SET_USED(free_block, 0);
 
@@ -706,6 +731,7 @@ void heap_free(heap_t * heap, void *ptr){
 
 			// Add this block back to list or tree
 			heap_insert(heap, free_block);
+            heap_unlock(heap);
 		}
 	}
 }

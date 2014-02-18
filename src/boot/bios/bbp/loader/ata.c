@@ -217,7 +217,7 @@ void ata_init_dev(uint8 i){
 bool ata_init(){
     uint8 dev_count = pci_num_device(0x01, 0x01);
     uint8 i;
-    debug_print(DC_WB, "IDE count: %d", dev_count);
+    debug_print(DC_WB, "IDE count: %d", (uint64)dev_count);
 
     _ide_chan = (ide_chan_t *)mem_alloc(sizeof(ide_chan_t) * 2 * dev_count);
     _ide_chan_count = 0;
@@ -225,7 +225,7 @@ bool ata_init(){
     for (i = 0; i < dev_count; i ++){
         pci_addr_t addr = pci_get_device(0x01, 0x01, 0);
 
-        debug_print(DC_WB, "    Addr: 0x%x", addr.raw);
+        debug_print(DC_WB, "    Addr: 0x%x", (uint64)addr.raw);
 
         if (addr.raw != 0){
             pci_device_t *dev = (pci_device_t *)mem_alloc(sizeof(pci_device_t));
@@ -235,7 +235,7 @@ bool ata_init(){
         }
     }
 
-    debug_print(DC_WB, "IDE channels: %d", _ide_chan_count);
+    debug_print(DC_WB, "IDE channels: %d", (uint64)_ide_chan_count);
 
     if (_ide_chan_count > 0){
 
@@ -248,11 +248,11 @@ bool ata_init(){
             ata_init_dev(i);
         }
 
-        debug_print(DC_WB, "ATA devices: %d", _ata_dev_count);
+        debug_print(DC_WB, "ATA devices: %d", (uint64)_ata_dev_count);
         for (i = 0; i < _ata_dev_count; i ++){
-            debug_print(DC_WB, "ATA drive @0x%x (%s)", _ata_dev[i].channel->base, (_ata_dev[i].status.master ? "Master" : "Slave"));
-            debug_print(DC_WB, "    Size %d", _ata_dev[i].sectors);
-            debug_print(DC_WB, "    Model %s", _ata_dev[i].model);
+            debug_print(DC_WB, "ATA drive @0x%x (%s)", (uint64)_ata_dev[i].channel->base, (_ata_dev[i].status.master ? "Master" : "Slave"));
+            debug_print(DC_WB, "    Size %d", (uint64)_ata_dev[i].sectors);
+            debug_print(DC_WB, "    Model %s", (uint64)_ata_dev[i].model);
         }
 
         if (_ata_dev_count > 0){
@@ -264,6 +264,6 @@ bool ata_init(){
 
 
 uint64 ata_handler(irq_stack_t *stack){
-    debug_print(DC_WB, "ATA IRQ %d", stack->irq_no);
+    debug_print(DC_WB, "ATA IRQ %d", (uint64)stack->irq_no);
     return 0;
 }

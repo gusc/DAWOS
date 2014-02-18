@@ -71,35 +71,27 @@ void main64(){
         debug_print(DC_WB, "Bootloader: 0x7E00 - 0x%x", (uint64)&_end);
 
         // Disable interrupts
-        debug_print(DC_WB, "Disable interrupts");
         interrupt_disable();
         // Initialize memory manager
-        debug_print(DC_WB, "Memory init");
         mem_init();
         // Initialize PIC
-        debug_print(DC_WB, "PIC init");
         pic_init();
         // Initialize interrupts
-        debug_print(DC_WB, "Interrupt init");
         interrupt_init();
         // Initialize paging (well, actually re-initialize)
-        debug_print(DC_WB, "Page init");
         page_init();
         // Initialize kernel heap allocator
-        debug_print(DC_WB, "Heap init");
         mem_init_heap(HEAP_MAX_SIZE);
         // Initialize PIT
-        debug_print(DC_WB, "PIT init");
         pit_init(PIT_COUNTER);
         // Enable all IRQs
-        debug_print(DC_WB, "Enable IRQs");
-        pic_enable(0xFFFE);
+        pic_enable(0xFFFF);
         // Enable interrupts (Do it after PCI, otherwise it seems to GPF at random)
-        debug_print(DC_WB, "Enable interrupts");
         interrupt_enable();
             
         // Initialize PCI
         debug_print(DC_WB, "PCI init");
+
         if (pci_init()){
 #if DEBUG == 1
 		    //pci_list();

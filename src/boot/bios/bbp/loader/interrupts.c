@@ -251,34 +251,42 @@ void isr_wrapper(isr_stack_t stack){
 #if DEBUG == 1
 	debug_print(DC_WB, "No handler found");
 	if (int_no < 19){
-		debug_print(DC_WB, "INT %d, %s", int_no, ints[int_no]);
+		debug_print(DC_WB, "INT %d, %s", (uint64)int_no, ints[int_no]);
 	} else {
-		debug_print(DC_WB, "INT %d", int_no);
+		debug_print(DC_WB, "INT %d", (uint64)int_no);
 	}
 #endif
 
 	// Process some exceptions here	
 	switch (int_no){
 		case 0: // Division by zero
-			//stack.rip++; // it's ok to divide by zero - move to next instruction :P
+            //stack.rip++; // it's ok to divide by zero - move to next instruction :P
+#if DEBUG == 1
+            debug_print(DC_WRD, "Error: %x", (uint64)stack.err_code);
+			debug_print(DC_WRD, "SP: %x", (uint64)stack.rsp);
+            debug_print(DC_WRD, "IP: %x", (uint64)stack.rip);
+#endif
+			HANG();
 			break;
 		case 6: // Invalid opcode
-            debug_print(DC_WRD, "Error: %x", stack.err_code);
-			debug_print(DC_WRD, "SP: %x", stack.rsp);
-            debug_print(DC_WRD, "IP: %x", stack.rip);
+#if DEBUG == 1
+            debug_print(DC_WRD, "Error: %x", (uint64)stack.err_code);
+			debug_print(DC_WRD, "SP: %x", (uint64)stack.rsp);
+            debug_print(DC_WRD, "IP: %x", (uint64)stack.rip);
+#endif
 			HANG();
 			break;
         case 8: // Double fault
 #if DEBUG == 1
-			debug_print(DC_WRD, "Error: %x", stack.err_code);
-			debug_print(DC_WRD, "SP: %x", stack.rsp);
-            debug_print(DC_WRD, "IP: %x", stack.rip);
+			debug_print(DC_WRD, "Error: %x", (uint64)stack.err_code);
+			debug_print(DC_WRD, "SP: %x", (uint64)stack.rsp);
+            debug_print(DC_WRD, "IP: %x", (uint64)stack.rip);
 #endif
 		case 13: // General protection fault
 #if DEBUG == 1
-			debug_print(DC_WRD, "Error: %x", stack.err_code);
-			debug_print(DC_WRD, "SP: %x", stack.rsp);
-            debug_print(DC_WRD, "IP: %x", stack.rip);
+			debug_print(DC_WRD, "Error: %x", (uint64)stack.err_code);
+			debug_print(DC_WRD, "SP: %x", (uint64)stack.rsp);
+            debug_print(DC_WRD, "IP: %x", (uint64)stack.rip);
 #endif
 			HANG();
 			break;
@@ -301,12 +309,12 @@ void irq_wrapper(irq_stack_t stack){
 		irq_handler_t handler = irq_handlers[irq_no];
 		if (handler(&stack)){
 #if DEBUG == 1
-			debug_print(DC_WRD, "Unhandled IRQ %d", irq_no);
+			debug_print(DC_WRD, "Unhandled IRQ %d", (uint64)irq_no);
 #endif
 		}
 	} else {
 #if DEBUG == 1
-        debug_print_at(74, 0, DC_WB, "IRQ %d", irq_no);
+        debug_print_at(74, 0, DC_WB, "IRQ %d", (uint64)irq_no);
 #endif
     }
 

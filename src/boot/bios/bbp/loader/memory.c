@@ -95,7 +95,7 @@ void *mem_alloc_align(uint64 size){
 void *mem_alloc_clean(uint64 size){
 	if (_heap != 0){
 		// Heap allocation
-		void *ptr = heap_alloc(_heap, size, false);
+        void *ptr = heap_alloc(_heap, size, false);
 		uint64 size = heap_alloc_size(ptr);
 		mem_fill((uint8 *)ptr, size, 0);
 		return ptr;
