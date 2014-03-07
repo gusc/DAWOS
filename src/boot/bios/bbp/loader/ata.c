@@ -71,6 +71,7 @@ static uint8 ata_read_reg(uint8 channel, uint8 reg) {
    if (reg > 0x07 && reg < 0x0C){
       ata_write_reg(channel, ATA_REG_CONTROL, 0x80 | _ide_chan[channel].no_int);
    }
+   sleep(1);
    if (reg < 0x08){
       result = inb(_ide_chan[channel].base + reg - 0x00);
    } else if (reg < 0x0C){
@@ -90,6 +91,7 @@ void ata_read_buffer(uint8 channel, uint8 reg, uint32 *buffer, uint64 quads) {
    if (reg > 0x07 && reg < 0x0C){
       ata_write_reg(channel, ATA_REG_CONTROL, 0x80 | _ide_chan[channel].no_int);
    }
+   sleep(1);
    //asm("pushw %es; movw %ds, %ax; movw %ax, %es");
    if (reg < 0x08){
       insd(_ide_chan[channel].base  + reg - 0x00, buffer, quads);
@@ -217,18 +219,16 @@ void ata_init_dev(uint8 i){
 bool ata_init(){
     uint8 dev_count = pci_num_device(0x01, 0x01);
     uint8 i;
+    pci_addr_t addr;
     debug_print(DC_WB, "IDE count: %d", (uint64)dev_count);
 
-    _ide_chan = (ide_chan_t *)mem_alloc(sizeof(ide_chan_t) * 2 * dev_count);
+    _ide_chan = (ide_chan_t *)mem_alloc_clean(sizeof(ide_chan_t) * 2 * dev_count);
     _ide_chan_count = 0;
     _ata_dev_count = 0;
     for (i = 0; i < dev_count; i ++){
-        pci_addr_t addr = pci_get_device(0x01, 0x01, 0);
-
-        debug_print(DC_WB, "    Addr: 0x%x", (uint64)addr.raw);
-
-        if (addr.raw != 0){
-            pci_device_t *dev = (pci_device_t *)mem_alloc(sizeof(pci_device_t));
+        if (pci_get_device(&addr, 0x01, 0x01, 0)){
+            debug_print(DC_WB, "    Addr: 0x%x", (uint64)addr.raw);
+            pci_device_t *dev = (pci_device_t *)mem_alloc_clean(sizeof(pci_device_t));
             pci_get_config(dev, addr);
 
             ata_init_ide(dev->bar[0], dev->bar[1], dev->bar[2], dev->bar[3], dev->bar[4]);
@@ -242,7 +242,7 @@ bool ata_init(){
         interrupt_reg_irq_handler(14, &ata_handler);
         interrupt_reg_irq_handler(15, &ata_handler);
 
-        _ata_dev = (ata_dev_t *)mem_alloc(sizeof(ata_dev_t) * 2 * _ide_chan_count);
+        _ata_dev = (ata_dev_t *)mem_alloc_clean(sizeof(ata_dev_t) * 2 * _ide_chan_count);
         _ata_dev_count = 0;
         for (i = 0; i < _ide_chan_count; i ++){
             ata_init_dev(i);

@@ -40,8 +40,42 @@
 [extern isr_wrapper]                            ; Import isr_wrapper from C
 [extern irq_wrapper]                            ; Import irq_wrapper from C
 [global idt_set]                                ; Export void idt_set(idt_ptr_t *idt) to C
-[global interrupt_disable]                      ; Export void interrupt_disable() to C
-[global interrupt_enable]                       ; Export void interrupt_enable() to C
+
+; Macro to push all the registers
+%macro PUSH_ALL 0
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+    push rsi
+    push rdi
+    push rdx
+    push rcx
+    push rbx
+    push rax
+%endmacro
+
+; Macro to pop all the registers
+%macro POP_ALL 0
+    pop rax
+    pop rbx
+    pop rcx
+    pop rdx
+    pop rdi
+    pop rsi
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    pop r13
+    pop r14
+    pop r15
+%endmacro
 
 ; Macro to create an intterupt service routine for interrupts that do not pass error codes 
 %macro INT_NO_ERR 1
@@ -50,9 +84,15 @@ isr%1:
     cli                                         ; disable interrupts
     push qword 0                                ; set error code to 0
     push qword %1                               ; set interrupt number
-    call isr_wrapper                            ; call void isr_wrapper(int_stack_t stack)
-    sti                                         ; enable interrupts
+    push rbp                                    ; push current rbp
+    PUSH_ALL                                    ; push all the registers on the stack
+    mov rbp, rsp                                ; store current stack frame in rbp
+    mov rdi, rsp                                ; pass our stack as a pointer to isr_wrapper
+    call isr_wrapper                            ; call void isr_wrapper(int_stack_t *stack)
+    POP_ALL                                     ; pop all the registers back from the stack
+    pop rbp                                     ; get our rbp back from the stack
     add rsp, 16                                 ; cleanup stack
+    sti                                         ; enable interrupts
     iretq                                       ; return from interrupt handler
 %endmacro
 
@@ -62,9 +102,15 @@ isr%1:
 isr%1:
     cli                                         ; disable interrupts
     push qword %1                               ; set interrupt number
-    call isr_wrapper                            ; call void isr_wrapper(int_stack_t stack)
-    sti                                         ; enable interrupts
+    push rbp                                    ; push current rbp
+    PUSH_ALL                                    ; push all the registers on the stack
+    mov rbp, rsp                                ; store current stack frame in rbp
+    mov rdi, rsp                                ; pass our stack as a pointer to isr_wrapper
+    call isr_wrapper                            ; call void isr_wrapper(int_stack_t *stack)
+    POP_ALL                                     ; pop all the registers back from the stack
+    pop rbp                                     ; get our rbp back from the stack
     add rsp, 16                                 ; cleanup stack
+    sti                                         ; enable interrupts
     iretq                                       ; return from interrupt handler
 %endmacro
 
@@ -77,19 +123,17 @@ irq%1:
     cli                                         ; disable interrupts
     push qword %1                               ; set IRQ number in the place of error code (see registers_t in interrupts.h)
     push qword %2                               ; set interrupt number
-    call irq_wrapper                            ; calls void irq_wrapper(int_stack_t stack)
-    sti                                         ; enable interrupts
+    push rbp                                    ; push current rbp
+    PUSH_ALL                                    ; push all the registers on the stack
+    mov rbp, rsp                                ; store current stack frame in rbp
+    mov rdi, rsp                                ; pass our stack as a pointer to isr_wrapper
+    call irq_wrapper                            ; calls void irq_wrapper(irq_stack_t *stack)
+    POP_ALL                                     ; pop all the registers back from the stack
+    pop rbp                                     ; get our rbp back from the stack
     add rsp, 16                                 ; cleanup stack
+    sti                                         ; enable interrupts
     iretq                                       ; return from interrupt handler
 %endmacro
-
-interrupt_disable:                              ; prototype: void interrupt_disable()
-    cli                                         ; disable interrupts
-    ret                                         ; return to C
-
-interrupt_enable:                               ; prototype: void interrupt_enable()
-    sti                                         ; enable interrupts
-    ret                                         ; return to C
 
 idt_set:                                        ; prototype: void idt_set(uint32 idt_ptr)
     lidt [rdi]                                  ; load the IDT (x86_64 calling convention - 1st argument goes into RDI)
@@ -104,7 +148,7 @@ INT_NO_ERR 4
 INT_NO_ERR 5
 INT_NO_ERR 6
 INT_NO_ERR 7
-INT_NO_ERR 8                                    ; By all specs int 8 is double fault WITH error message, but not in Bochs, WHY?
+INT_HAS_ERR 8                                    ; By all specs int 8 is double fault WITH error message, but not in Bochs, WHY?
 INT_NO_ERR 9
 INT_HAS_ERR 10
 INT_HAS_ERR 11
@@ -113,7 +157,7 @@ INT_HAS_ERR 13
 INT_HAS_ERR 14
 INT_NO_ERR 15
 INT_NO_ERR 16
-INT_NO_ERR 17
+INT_HAS_ERR 17
 INT_NO_ERR 18
 INT_NO_ERR 19
 INT_NO_ERR 20

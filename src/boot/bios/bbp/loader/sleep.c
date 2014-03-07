@@ -50,24 +50,26 @@ void isleep(uint64 iter){
 
 void sleep(uint64 time){
     uint64 counter = (uint64)pit_get_counter();
-    uint64 ticks_per_ms = PIT_FREQ / (counter * 1000);
-    if (ticks_per_ms == 0){
-        // We need at least one tick per ms
-        ticks_per_ms = 1;
-    }
-    uint64 tick_count = time * ticks_per_ms;
-    uint64 tick_start = pit_get_ticks();
-    uint64 tick = tick_start;
-    while (tick < tick_start + tick_count){
-        tick = pit_get_ticks();
-        NOP();
-        NOP();
-        NOP();
-        NOP();
-        NOP();
-        NOP();
-        NOP();
-        NOP();
+    if (counter > 0){
+        uint64 ticks_per_ms = PIT_FREQ / (counter * 1000);
+        if (ticks_per_ms == 0){
+            // We need at least one tick per ms
+            ticks_per_ms = 1;
+        }
+        uint64 tick_count = time * ticks_per_ms;
+        uint64 tick_start = pit_get_ticks();
+        uint64 tick = tick_start;
+        while (tick < tick_start + tick_count){
+            tick = pit_get_ticks();
+            NOP();
+            NOP();
+            NOP();
+            NOP();
+            NOP();
+            NOP();
+            NOP();
+            NOP();
+        }
     }
     //debug_print(DC_WB, "Sleep - s: %d, e: %d, t: %d", tick_start, tick, tick_count);
 }

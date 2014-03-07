@@ -70,16 +70,6 @@ void debug_clear(uint8 color);
 void debug_scroll();
 /**
 * Print a formated string on the teletype (text mode) screen
-* @param x coordinate (a.k.a. column 0-79)
-* @param y coordinate (a.k.a. line 0-24)
-* @param color - color byte
-* @param [in] format - standard C printf format string
-* @param [in] ... - additional arguments
-* @return void
-*/
-void debug_print_at(uint8 x, uint8 y, uint8 color, const char *format, ...);
-/**
-* Print a formated string on the teletype (text mode) screen
 * @param color - color byte
 * @param [in] format - standard C printf format string
 * @param [in] ... - additional arguments

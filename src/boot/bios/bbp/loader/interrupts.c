@@ -88,6 +88,10 @@ isr_handler_t isr_handlers[256];
 * Interrupt handlers
 */
 irq_handler_t irq_handlers[16];
+/**
+* Current interrupt status
+*/
+static bool _int_enabled = false;
 
 /**
 * Set IDT pointer
@@ -159,6 +163,7 @@ static void idt_set_entry(uint8 num, uint64 addr, uint8 flags){
 }
 
 void interrupt_init(){
+    _int_enabled = false;
     //idt = (idt_entry_t *)mem_alloc_clean(sizeof(idt_entry_t) * 256);
     //idt_ptr = (idt_ptr_t *)mem_alloc_clean(sizeof(idt_ptr_t));
     //isr_handlers = (isr_handler_t *)mem_alloc_clean(sizeof(isr_handler_t) * 256);
@@ -166,7 +171,7 @@ void interrupt_init(){
     mem_fill((uint8 *)&idt, sizeof(idt_entry_t) * 256, 0);
     mem_fill((uint8 *)&idt_ptr, sizeof(idt_ptr_t), 0);
     mem_fill((uint8 *)isr_handlers, sizeof(isr_handler_t) * 256, 0);
-    mem_fill((uint8 *)irq_handlers, sizeof(irq_handler_t) * 256, 0);
+    mem_fill((uint8 *)irq_handlers, sizeof(irq_handler_t) * 16, 0);
     
 	idt_set_entry( 0, (uint64)isr0 , 0x8E);  // Division by zero exception
 	idt_set_entry( 1, (uint64)isr1 , 0x8E);  // Debug exception
@@ -223,6 +228,21 @@ void interrupt_init(){
     idt_set(&idt_ptr);
 }
 
+bool interrupt_status(){
+    return _int_enabled;
+}
+void interrupt_disable(){
+    if (_int_enabled){
+        asm volatile("cli");
+        _int_enabled = false;
+    }
+}
+void interrupt_enable(){
+    if (!_int_enabled){
+        asm volatile("sti");
+        _int_enabled = true;
+    }
+}
 void interrupt_reg_isr_handler(uint64 int_no, isr_handler_t handler){
     if (int_no < 256){
 		isr_handlers[int_no] = handler;
@@ -234,67 +254,73 @@ void interrupt_reg_irq_handler(uint64 irq_no, irq_handler_t handler){
 	}
 }
 
-void isr_wrapper(isr_stack_t stack){
-	uint8 int_no = (uint8)stack.int_no;
+static void print_stack(isr_stack_t *stack){
+    debug_print(DC_WRD, "RAX: %x, RBX: %x, RCX: %x, RDX: %x", stack->rax, stack->rbx, stack->rcx, stack->rdx);
+    debug_print(DC_WRD, "RDI: %x, RSI: %x, RBP: %x", stack->rdi, stack->rsi, stack->rbp);
+    debug_print(DC_WRD, "CS: %x, SS: %x, RFLAGS: %x", stack->cs, stack->ss, stack->rflags);
+	debug_print(DC_WRD, "RSP: %x, RIP: %x", stack->rsp, stack->rip);
+}
+
+void isr_wrapper(isr_stack_t *stack){
+	uint8 int_no = (uint8)stack->int_no;
 	// Try to handle interrupt
 	if (isr_handlers[int_no] != 0){
 		isr_handler_t handler = isr_handlers[int_no];
-		if (!handler(&stack)){
+		if (!handler(stack)){
 			return;
-#if DEBUG == 1
-		} else {
-            debug_print(DC_WB, "Unhandled interrupt");
-#endif
         }
 	}
-
-#if DEBUG == 1
-	debug_print(DC_WB, "No handler found");
-	if (int_no < 19){
-		debug_print(DC_WB, "INT %d, %s", (uint64)int_no, ints[int_no]);
-	} else {
-		debug_print(DC_WB, "INT %d", (uint64)int_no);
-	}
-#endif
 
 	// Process some exceptions here	
 	switch (int_no){
 		case 0: // Division by zero
             //stack.rip++; // it's ok to divide by zero - move to next instruction :P
 #if DEBUG == 1
-            debug_print(DC_WRD, "Error: %x", (uint64)stack.err_code);
-			debug_print(DC_WRD, "SP: %x", (uint64)stack.rsp);
-            debug_print(DC_WRD, "IP: %x", (uint64)stack.rip);
+            debug_print(DC_WGR, "INT %d, %s", (uint64)int_no, ints[int_no]);
+            debug_print(DC_WRD, "Error: %x", (uint64)stack->err_code);
+            print_stack(stack);
 #endif
 			HANG();
 			break;
 		case 6: // Invalid opcode
 #if DEBUG == 1
-            debug_print(DC_WRD, "Error: %x", (uint64)stack.err_code);
-			debug_print(DC_WRD, "SP: %x", (uint64)stack.rsp);
-            debug_print(DC_WRD, "IP: %x", (uint64)stack.rip);
+            debug_print(DC_WGR, "INT %d, %s", (uint64)int_no, ints[int_no]);
+            debug_print(DC_WRD, "Error: %x", (uint64)stack->err_code);
+			print_stack(stack);
 #endif
 			HANG();
 			break;
         case 8: // Double fault
 #if DEBUG == 1
-			debug_print(DC_WRD, "Error: %x", (uint64)stack.err_code);
-			debug_print(DC_WRD, "SP: %x", (uint64)stack.rsp);
-            debug_print(DC_WRD, "IP: %x", (uint64)stack.rip);
+            debug_print(DC_WGR, "INT %d, %s", (uint64)int_no, ints[int_no]);
+            debug_print(DC_WRD, "Error: %x", (uint64)stack->err_code);
+			print_stack(stack);
 #endif
+            HANG();
 		case 13: // General protection fault
 #if DEBUG == 1
-			debug_print(DC_WRD, "Error: %x", (uint64)stack.err_code);
-			debug_print(DC_WRD, "SP: %x", (uint64)stack.rsp);
-            debug_print(DC_WRD, "IP: %x", (uint64)stack.rip);
+            debug_print(DC_WGR, "INT %d, %s", (uint64)int_no, ints[int_no]);
+            debug_print(DC_WRD, "Error: %x", (uint64)stack->err_code);
+			print_stack(stack);
 #endif
 			HANG();
 			break;
+        default:
+#if DEBUG == 1
+            /*
+	        if (int_no < 19){
+		        debug_print(DC_WGR, "INT %d, %s", (uint64)int_no, ints[int_no]);
+	        } else {
+		        debug_print(DC_WGR, "INT %d", (uint64)int_no);
+	        }
+            */
+#endif
+            break;
 	}
 }
 
-void irq_wrapper(irq_stack_t stack){
-    uint8 irq_no = (uint8)stack.irq_no;
+void irq_wrapper(irq_stack_t *stack){
+    uint8 irq_no = (uint8)stack->irq_no;
     uint16 isr = pic_read_ocw3(PIC_READ_ISR);
 
     if (irq_no == 2){
@@ -307,14 +333,14 @@ void irq_wrapper(irq_stack_t stack){
     
 	if (irq_handlers[irq_no] != 0){
 		irq_handler_t handler = irq_handlers[irq_no];
-		if (handler(&stack)){
+		if (handler(stack)){
 #if DEBUG == 1
 			debug_print(DC_WRD, "Unhandled IRQ %d", (uint64)irq_no);
 #endif
 		}
 	} else {
 #if DEBUG == 1
-        debug_print_at(74, 0, DC_WB, "IRQ %d", (uint64)irq_no);
+        debug_print(DC_WB, "IRQ %d", (uint64)irq_no);
 #endif
     }
 

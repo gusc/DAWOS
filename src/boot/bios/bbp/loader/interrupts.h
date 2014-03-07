@@ -61,25 +61,55 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define IRQ15 47
 
 /**
-* Register stack passed from assembly
+* Stack of registers passed from assembly
 */
 typedef struct {
-	uint64 int_no;				// Interrupt number
-	uint64 err_code;			// Error code (or IRQ number for IRQs)
-	uint64 rip;					// Return instruction pointer
-	uint64 cs;					// Code segment
-	uint64 rflags;				// RFLAGS
-	uint64 rsp;					// Previous stack pointer
-	uint64 ss;					// Stack segment
+    uint64 rax;
+    uint64 rbx;
+    uint64 rcx;
+    uint64 rdx;
+    uint64 rdi;
+    uint64 rsi;
+    uint64 r8;
+    uint64 r9;
+    uint64 r10;
+    uint64 r11;
+    uint64 r12;
+    uint64 r13;
+    uint64 r14;
+    uint64 r15;
+    uint64 rbp;
+    uint64 int_no;				// Interrupt number
+    uint64 err_code;			// Error code (or IRQ number for IRQs)
+    uint64 rip;					// Return instruction pointer
+    uint64 cs;					// Code segment
+    uint64 rflags;				// RFLAGS
+    uint64 rsp;					// Previous stack pointer
+    uint64 ss;					// Stack segment
 } isr_stack_t;
 typedef struct {
-	uint64 int_no;				// Interrupt number
-	uint64 irq_no;			    // Error code (or IRQ number for IRQs)
-	uint64 rip;					// Return instruction pointer
-	uint64 cs;					// Code segment
-	uint64 rflags;				// RFLAGS
-	uint64 rsp;					// Previous stack pointer
-	uint64 ss;					// Stack segment
+    uint64 rax;
+    uint64 rbx;
+    uint64 rcx;
+    uint64 rdx;
+    uint64 rdi;
+    uint64 rsi;
+    uint64 r8;
+    uint64 r9;
+    uint64 r10;
+    uint64 r11;
+    uint64 r12;
+    uint64 r13;
+    uint64 r14;
+    uint64 r15;
+    uint64 rbp;
+    uint64 int_no;				// Interrupt number
+    uint64 irq_no;			    // Error code (or IRQ number for IRQs)
+    uint64 rip;					// Return instruction pointer
+    uint64 cs;					// Code segment
+    uint64 rflags;				// RFLAGS
+    uint64 rsp;					// Previous stack pointer
+    uint64 ss;					// Stack segment
 } irq_stack_t;
 /**
 * Interrupt Descriptor Table (IDT) entry structure
@@ -131,6 +161,19 @@ extern void interrupt_disable();
 */
 extern void interrupt_enable();
 /**
+* Get current state of interrupts
+* @return interrupts enabled
+*/
+bool interrupt_status();
+/**
+* Disable all interrupts
+*/
+void interrupt_disable();
+/**
+* Enable all interrupts
+*/
+void interrupt_enable();
+/**
 * Register an interrupt service routine handler
 * @param int_no - interrupt number
 * @param handler - callback function
@@ -148,13 +191,13 @@ void interrupt_reg_irq_handler(uint64 irq_no, irq_handler_t handler);
 * @param stack - registers pushed on the stack by assembly
 * @return void
 */
-void isr_wrapper(isr_stack_t stack);
+void isr_wrapper(isr_stack_t *stack);
 /**
 * Interrupt Request (IRQ) wrapper
 * This will be defined in kernel code
 * @param stack - registers pushed on the stack by assembly
 * @return void
 */
-void irq_wrapper(irq_stack_t stack);
+void irq_wrapper(irq_stack_t *stack);
 
 #endif

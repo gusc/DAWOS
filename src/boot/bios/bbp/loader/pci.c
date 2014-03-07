@@ -56,7 +56,7 @@ typedef struct {
 	uint8 subclass_id;
 	uint8 prog_if;
 	uint8 type;
-} __PACKED pci_cache_t;
+} pci_cache_t;
 
 /*
 static uint32 pci_get_addr(uint16 bus, uint8 device, uint8 function, uint8 reg){
@@ -111,21 +111,22 @@ static uint16 pci_get_secondary_bus(uint16 bus, uint8 device, uint8 function){
 
 bool pci_init(){
 	uint16 bus = 0;
-	pci_header_t header;
+	pci_header_t *header;
 	pci_addr_t addr;
 	addr.raw = 0x80000000;
 
+    header = (pci_header_t *)mem_alloc_clean(sizeof(pci_header_t));
     _cache = (pci_cache_t *)mem_alloc_clean(sizeof(pci_cache_t *) * 256);
     _cache_len = 0;
 
 	// Recursive scan - thanks OSDev Wiki
-	pci_get_header(&header, addr);
-    if ((header.type & 0x80) != 0){
+	pci_get_header(header, addr);
+    if ((header->type & 0x80) != 0){
 		// Multiple PCI host controllers
 		for (bus = 0; bus < 8; bus ++){
 			addr.s.bus = bus;
-			pci_get_header(&header, addr);
-			if (header.vendor_id != 0xFFFF){
+			pci_get_header(header, addr);
+			if (header->vendor_id != 0xFFFF){
 				// Valid PCI host controller
 				pci_enum_bus(bus);
 			}
@@ -134,6 +135,9 @@ bool pci_init(){
 		// Single PCI host controller
 		pci_enum_bus(0);
 	}
+
+    // Free the header block
+    mem_free((void *)header);
 
     if (_cache_len > 0){
         return true;
@@ -152,20 +156,19 @@ uint8 pci_num_device(uint8 class_id, uint8 subclass_id){
 	return x;
 }
 
-pci_addr_t pci_get_device(uint8 class_id, uint8 subclass_id, uint8 idx){
+bool pci_get_device(pci_addr_t *addr, uint8 class_id, uint8 subclass_id, uint8 idx){
 	uint16 i = 0;
 	uint8 x = 0;
-	pci_addr_t addr_none;
-	addr_none.raw = 0;
 	for (i = 0; i < _cache_len; i ++){
 		if (_cache[i].class_id == class_id && _cache[i].subclass_id == subclass_id){
 			if (x == idx){
-				return _cache[i].address;
+                addr->raw = _cache[i].address.raw;
+                return true;
 			}
 			x ++;
 		}
 	}
-	return addr_none;
+	return false;
 }
 
 void pci_get_header(pci_header_t *header, pci_addr_t addr){

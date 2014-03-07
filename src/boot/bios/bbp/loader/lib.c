@@ -107,7 +107,7 @@ int64 str_char_idx(const char *haystack, const char needle, uint64 offset){
 	return -1;
 }
 uint64 int_to_str(char *dest, uint64 len, int64 val, int64 base){
-	static char tmp[MAX_INT_STR + 1];
+    static char tmp[MAX_INT_STR + 1];
 	mem_fill((uint8 *)tmp, MAX_INT_STR + 1, 0);
 	char *b = (char *)tmp + MAX_INT_STR;
 	char c = 0;

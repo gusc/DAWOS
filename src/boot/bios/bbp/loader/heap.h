@@ -57,22 +57,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Minimum free block size listed in segregated lists in bytes (16 is a minumum on 64bit systems, 
 // as we have to store 2 pointers in free list blocks, each 8 bytes)
 // TODO: There's a bug if we increase this to 32 - something wrong with alignament calculations - must fix
-#define HEAP_LIST_MIN 16
+#define HEAP_LIST_MIN 48 // 16 + sizeof(heap_header_t) + sizeof(heap_footer_t)
 // Maximum free block size listed in segregated lists in bytes (larger ones go to a search tree)
-#define HEAP_LIST_MAX 1024
+#define HEAP_LIST_MAX 1056 // 1024 + sizeof(heap_header_t) + sizeof(heap_footer_t)
 
 // Align to 16 byte boundary
-#define HEAP_IMASK (HEAP_LIST_MIN - 1) // 15
-#define HEAP_MASK  (~HEAP_IMASK) // -16
+#define HEAP_MASK  0xFFFFFFFFFFFFFFF0 // -16
+#define HEAP_IMASK 0x000000000000000F // 15
 
 /**
-* Size align to the minimum size of the heap
-* @param psize - payload size
-* @return heap aligned payload size
+* Align address to the start of the heap alignament
+* @param a - addres to align
+* @return heap aligned address
 */
-#define HEAP_ALIGN(psize) ((psize + HEAP_IMASK) & HEAP_MASK)
+#define HEAP_ALIGN(a) (a & HEAP_MASK)
+/**
+* Align size to the minimum size of the heap
+* @param s - size
+* @return heap aligned size
+*/
+#define HEAP_SIZE_ALIGN(s) ((s + HEAP_IMASK) & HEAP_MASK)
 // Element size distribution in segregated lists (let's put it the same size as minimum)
-#define HEAP_LIST_SPARSE HEAP_LIST_MIN
+#define HEAP_LIST_SPARSE 16
 // Segregated list count
 #define HEAP_LIST_COUNT ((HEAP_LIST_MAX - HEAP_LIST_MIN) / HEAP_LIST_SPARSE)
 
@@ -80,9 +86,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * Heap block size structure
 */
 typedef struct {
-	uint64 used       : 1;
-	uint64 reserved   : 3; // Planned to implement locks and read/write attributes
-	uint64 frames     : 60; // Upper 60 bits of heap block size, let's call them frames (to mimic micro-paging)
+	uint64 used         : 1;
+    uint64 aligned      : 1;
+	uint64 reserved     : 2; // Planned to implement locks and read/write attributes
+	uint64 frames       : 60; // Upper 60 bits of heap block size, let's call them frames (to mimic micro-paging)
 } heap_size_t;
 /**
 * Heap block header structure
@@ -129,7 +136,7 @@ heap_t * heap_create(uint64 start, uint64 size, uint64 max_size);
 * @param align - align the beginning of the block to page (4KB) boundary
 * @return new pointer to the memory block allocated or 0
 */
-void *heap_alloc(heap_t *heap, uint64 psize, bool align);
+void *heap_alloc(heap_t *heap, uint64 size, bool align);
 /**
 * Re allocate a block of memory on the heap
 * @param heap - pointer to the beginning of the heap
@@ -138,7 +145,7 @@ void *heap_alloc(heap_t *heap, uint64 psize, bool align);
 * @param align - align the beginning of the block to page (4KB) boundary
 * @return new pointer to the memory block allocated or 0
 */
-void *heap_realloc(heap_t *heap, void *ptr, uint64 psize, bool align);
+void *heap_realloc(heap_t *heap, void *ptr, uint64 size, bool align);
 /**
 * Free memory block allocated by heap_alloc()
 * @param heap - pointer to the beginning of the heap

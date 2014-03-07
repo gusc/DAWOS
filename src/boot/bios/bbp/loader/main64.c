@@ -68,7 +68,7 @@ void main64(){
 #endif
     uint64 check = (uint64)(&_checksum);
     if (check == 0xF00BAA){
-        debug_print(DC_WB, "Bootloader: 0x7E00 - 0x%x", (uint64)&_end);
+        //debug_print(DC_WB, "Bootloader: 0x7E00 - 0x%x", (uint64)&_end);
 
         // Disable interrupts
         interrupt_disable();
@@ -88,19 +88,20 @@ void main64(){
         pic_enable(0xFFFF);
         // Enable interrupts (Do it after PCI, otherwise it seems to GPF at random)
         interrupt_enable();
-            
+        
         // Initialize PCI
         debug_print(DC_WB, "PCI init");
 
         if (pci_init()){
 #if DEBUG == 1
+            //mem_list();
 		    //pci_list();
 #endif
 	        // Initialize ATA
             debug_print(DC_WB, "ATA init");
             ata_init();
 	        // Initialize AHCI
-            debug_print(DC_WB, "AHCI init");
+            //debug_print(DC_WB, "AHCI init");
         
             //if (ahci_init()){
 #if DEBUG == 1

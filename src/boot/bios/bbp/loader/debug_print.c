@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../config.h"
 #include "debug_print.h"
 #include "lib.h"
+#include "interrupts.h"
 
 // Video screen size
 static uint64 _columns = 80;
@@ -49,7 +50,7 @@ static uint64 _x = 0;
 static uint64 _y = 0;
 static uint8 _base_color = 0x00;
 
-static void __debug_print_f(uint8 x, uint8 y, uint8 color, const char *format, va_list args);
+static void __debug_print_f(uint8 color, const char *format, va_list args);
 
 void debug_cursor(uint64 *x, uint64 *y){
 	*x = _x;
@@ -57,6 +58,10 @@ void debug_cursor(uint64 *x, uint64 *y){
 }
 
 void debug_clear(uint8 color){
+    bool int_status = interrupt_status();
+    if (int_status){
+        interrupt_disable();
+    }
 	char *vidmem = (char *)VIDEOMEM_LOC;
 	_base_color = color;
 	_y = 0;
@@ -64,6 +69,9 @@ void debug_clear(uint8 color){
 	uint16 fill = (_base_color << 8) + ' ';
 	// Fast clear line
 	asm volatile ("rep\n\tstosw" : : "a"(fill), "c"(_columns * _rows), "D"(vidmem));
+    if (int_status){
+        interrupt_enable();
+    }
 }
 
 void debug_scroll(){
@@ -72,31 +80,28 @@ void debug_scroll(){
 	uint16 last_row_char = (_rows - 1) * _columns;
 	uint16 fill = (_base_color << 8) + ' ';
 	// Fast scroll
-	asm volatile ("rep\n\tmovsw" : : "c"(last_row_char), "S"(vidmem + row_len), "D"(vidmem));
+    asm volatile ("rep\n\tmovsw" : : "c"(last_row_char), "S"(vidmem + row_len), "D"(vidmem));
 	// Fast clear line
 	asm volatile ("rep\n\tstosw" : : "a"(fill), "c"(_columns), "D"(vidmem + (last_row_char * 2)));
 }
 
-void debug_print_at(uint8 x, uint8 y, uint8 color, const char *format, ...){
-	va_list args;
-	va_start(args, format);
-	__debug_print_f(x, y, color, format, args);
-	va_end(args);
-}
-
 void debug_print(uint8 color, const char *format, ...){
-	if (_y >= _rows){
-		debug_scroll();
-		_y = _rows - 1;
-	}
-	va_list args;
+    bool int_status = interrupt_status();
+    if (int_status){
+        interrupt_disable();
+    }
+    va_list args;
 	va_start(args, format);
-	__debug_print_f(_x, _y, color, format, args);
-	va_end(args);
+    __debug_print_f(color, format, args);
+    _x = 0;
 	_y ++;
+    va_end(args);
+    if (int_status){
+        interrupt_enable();
+    }
 }
 
-static void __debug_print_f(uint8 x, uint8 y, uint8 color, const char *format, va_list args){
+static void __debug_print_f(uint8 color, const char *format, va_list args){
 	char *vidmem = (char *)VIDEOMEM_LOC;
 	static char str[2001];
 	mem_fill((uint8 *)str, 2001, 0);
@@ -105,19 +110,19 @@ static void __debug_print_f(uint8 x, uint8 y, uint8 color, const char *format, v
 	if (__write_f(str, 2000, format, args)){
 		char *s = (char *)str;
 		while (*s != 0){
-			if (*s == 0x0A || x >= _columns){ // New line (a.k.a \n) or forced wrap
-				x = 0;
-				y ++;
-				if (y >= _rows){
-					debug_scroll();
-					y = _rows - 1;
-				}
+			if (*s == 0x0A || _x >= _columns){ // New line (a.k.a \n) or forced wrap
+				_x = 0;
+				_y ++;
+			}
+            if (_y >= _rows){
+				debug_scroll();
+				_y = _rows - 1;
 			}
 			if (*s >= 0x20 && *s <= 0x7E){ // Only valid ASCII chars
-				i = (y * _columns * 2) + (x * 2);
+				i = (_y * _columns * 2) + (_x * 2);
 				vidmem[i] = *s;
 				vidmem[i + 1] = color;
-				x ++;
+				_x ++;
 			}
 			s++;
 		}

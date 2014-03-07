@@ -100,6 +100,8 @@ bool ahci_init(){
 	uint64 offset = 0;
 	uint8 dev_count = 0;
 	ahci_hba_t *hba;
+    pci_addr_t addr;
+
 	pci_device_t *dev = (pci_device_t *)mem_alloc_clean(sizeof(pci_device_t));
 	_ahci_dev = (ahci_dev_t *)mem_alloc_clean(sizeof(ahci_dev_t) * 256);
     _ahci_dev_count = 0;
@@ -108,10 +110,9 @@ bool ahci_init(){
     debug_print(DC_WB, "Dev count %d", dev_count);
 	if (dev_count > 0){
 		for (i = 0; i < dev_count; i ++){
-			pci_addr_t addr = pci_get_device(0x1, 0x6, i);
-            debug_print(DC_WB, "PCI addr: %x", addr.raw);
-			if (addr.raw != 0){
-				// Get AHCI controller configuration
+			if (pci_get_device(&addr, 0x1, 0x6, i)){
+                debug_print(DC_WB, "PCI addr: %x", addr.raw);
+			    // Get AHCI controller configuration
 				pci_get_config(dev, addr);
 				// Get ABAR (AHCI Base Address)
 				abar = ((uint64)(dev->bar[5])) & AHCI_HBA_MASK;

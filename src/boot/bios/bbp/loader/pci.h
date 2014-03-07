@@ -60,7 +60,7 @@ typedef union {
 		uint32 bus		: 8; // Bus number
 		uint32 reserved	: 7; // Reserved
 		uint32 enabled	: 1; // Enabled bit
-	} __PACKED s;
+	} s;
 	uint32 raw;
 } pci_addr_t;
 /**
@@ -79,7 +79,7 @@ typedef volatile struct {
 	uint8 latency_timer;
 	uint8 type;
 	uint8 bist;
-} __PACKED pci_header_t;
+} pci_header_t; // 16 bytes (4 dwords)
 /**
 * Standard PCI device configuration space structure
 */
@@ -96,7 +96,7 @@ typedef volatile struct {
 	uint8 int_pin;
 	uint8 min_grant;
 	uint8 max_latency;
-} __PACKED pci_device_t;
+} pci_device_t; // 64 bytes (16 dwords)
 
 /**
 * Enumerate PCI bus
@@ -111,12 +111,13 @@ bool pci_init();
 uint8 pci_num_device(uint8 class_id, uint8 subclass_id);
 /**
 * Locate PCI device by class and subclass
+* @param addr - PCI address
 * @param class_id - class code
 * @param subclass_id - sub-class
 * @param idx - device index (@see pci_num_device)
-* @return PCI address (check if it's not 0!)
+* @return true if device exists
 */
-pci_addr_t pci_get_device(uint8 class_id, uint8 subclass_id, uint8 idx);
+bool pci_get_device(pci_addr_t *addr, uint8 class_id, uint8 subclass_id, uint8 idx);
 /**
 * Read PCI device header
 * @param header - a pointer to header structure that needs to be filled
