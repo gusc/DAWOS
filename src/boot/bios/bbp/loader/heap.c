@@ -736,7 +736,7 @@ void *heap_realloc(heap_t * heap, void *ptr, uint64 size, bool align){
 		// This is easy :)
 		heap_wait_lock(heap);
         void *ptr_new = heap_alloc(heap, bsize, align);
-		mem_copy((uint8 *)ptr_new, psize_now, (uint8 *)ptr);
+		mem_copy((uint8 *)ptr_new, (uint8 *)ptr, psize_now);
 		heap_free(heap, ptr);
         heap_unlock(heap);
 		return ptr_new;

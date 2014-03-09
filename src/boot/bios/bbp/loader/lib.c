@@ -44,11 +44,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Memory manipulation functions
 //
 
-void mem_copy(uint8 *dest, uint64 len, const uint8 *src){
+void mem_copy(uint8 *dest, const uint8 *src, uint64 len){
 	// Fast copy
 	asm volatile ("rep\n\tmovsb" : : "c"(len), "S"(src), "D"(dest));
 }
-void mem_fill(uint8 *dest, uint64 len, uint8 val){
+void mem_fill(uint8 *dest, uint8 val, uint64 len){
 	// Fast fill
 	asm volatile ("rep\n\tstosb" : : "c"(len), "a"(val), "D"(dest));
 }
@@ -108,7 +108,7 @@ int64 str_char_idx(const char *haystack, const char needle, uint64 offset){
 }
 uint64 int_to_str(char *dest, uint64 len, int64 val, int64 base){
     static char tmp[MAX_INT_STR + 1];
-	mem_fill((uint8 *)tmp, MAX_INT_STR + 1, 0);
+	mem_fill((uint8 *)tmp, 0, MAX_INT_STR + 1);
 	char *b = (char *)tmp + MAX_INT_STR;
 	char c = 0;
 	if (val >= 0){

@@ -63,7 +63,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * @param len - number of bytes to copy
 * @return void
 */
-void mem_copy(uint8 *dest, uint64 len, const uint8 *src);
+void mem_copy(uint8 *dest, const uint8 *src, uint64 len);
 /**
 * Fill a memory buffer with a single byte value
 * @param [out] dest - destination memory
@@ -71,7 +71,7 @@ void mem_copy(uint8 *dest, uint64 len, const uint8 *src);
 * @param len - number of bytes to set
 * @return void
 */
-void mem_fill(uint8 *dest, uint64 len, uint8 val);
+void mem_fill(uint8 *dest, uint8 val, uint64 len);
 /**
 * Compare two memory regions
 * @param [in] buff1

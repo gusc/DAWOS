@@ -179,7 +179,7 @@ bool ahci_read(uint64 idx, uint64 addr, uint8 *buff, uint64 len){
 
 		ahci_hba_cmd_tbl_t *tbl = (ahci_hba_cmd_tbl_t *)cmd->ctba;
         page_map_mmio((uint64)tbl, (uint64)tbl);
-		mem_fill((uint8 *)tbl, sizeof(ahci_hba_cmd_tbl_t) + ((cmd->desc.prdtl - 1) * sizeof(ahci_hba_prdt_entry_t)), 0);
+		mem_fill((uint8 *)tbl, 0, sizeof(ahci_hba_cmd_tbl_t) + ((cmd->desc.prdtl - 1) * sizeof(ahci_hba_prdt_entry_t)));
 
 		uint64 i = 0;
 		uint64 count = len / AHCI_BLOCK_SIZE;
@@ -289,7 +289,7 @@ bool ahci_id(uint64 idx, uint8 *buff){
 		cmd->desc.prdtl = 1;	// PRDT entries count
 
 		ahci_hba_cmd_tbl_t *tbl = (ahci_hba_cmd_tbl_t *)cmd->ctba;
-		mem_fill((uint8 *)tbl, sizeof(ahci_hba_cmd_tbl_t), 0);
+		mem_fill((uint8 *)tbl, 0, sizeof(ahci_hba_cmd_tbl_t));
 
         // Last entry
 		tbl->prdt_entry[0].dba = (uint64)buff;

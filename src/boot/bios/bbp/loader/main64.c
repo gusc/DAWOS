@@ -99,19 +99,38 @@ void main64(){
 #endif
 	        // Initialize ATA
             debug_print(DC_WB, "ATA init");
-            ata_init();
+            if (ata_init()){
+#if DEBUG == 1
+		        ata_list();
+#endif
+                uint8 *mem = (uint8 *)mem_alloc_clean(512);
+                uint64 dev_count = ata_num_device();
+                uint64 y = 0;
+                if (dev_count > 0){
+                    debug_print(DC_WB, "Read:");
+                    if (ata_read(mem, 0, 0, 512)){
+                        for (y = 0; y < 64; y += 8){
+					        debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
+				        }
+                    } else {
+                        debug_print(DC_WB, "Failed");
+                    }
+                }
+
+            }
 	        // Initialize AHCI
             //debug_print(DC_WB, "AHCI init");
         
-            //if (ahci_init()){
+            /*if (ahci_init()){
 #if DEBUG == 1
-		        //ahci_list();
+		        ahci_list();
 #endif
-            /*
 		        uint8 *mem = (uint8 *)mem_alloc_clean(512);
 		        uint64 dev_count = ahci_num_dev();
 		        uint64 y = 23;
+                uint16 isr = pic_read_ocw3(PIC_READ_ISR);
 		        if (dev_count > 0){
+                    debug_print(DC_WB, "ISR: %x", (uint64)isr);
                     if (ahci_id(0, mem)){
                         debug_print(DC_WB, "ID OK");
                         debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
@@ -128,8 +147,7 @@ void main64(){
 				        debug_print(DC_WB, "Read failed");
 			        }
                 }
-            */
-	        //}
+	        }*/
         }
 #if DEBUG == 1
 	    debug_print(DC_WB, "Done");

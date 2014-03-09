@@ -137,15 +137,15 @@ typedef struct {
 typedef struct {
     struct {
         uint64 active           :1; // 0 - device is no connected, 1 - device is up-n-running
-        uint64 master           :1; // 1 = device is master
+        uint64 slave            :1; // 1 = device is slave
         uint64 atapi            :1; // 1 = device is ATAPI, 0 = ATA
         uint64 reserved         :61;
     } status;
-    ide_chan_t *channel;
     uint64 sectors;
     uint32 commands;
     uint16 capabilities;
     uint16 signature;
+    uint8 channel;
     uint8 model[41];
 } ata_dev_t;
 
@@ -381,8 +381,36 @@ typedef struct {
 */
 bool ata_init();
 /**
+* Get the number of ATA devices connected
+* @return number of ATA devices
+*/
+uint8 ata_num_device();
+/**
+* Get the device information
+* @param device - destination device structure
+* @param idx - device index
+* @return true on success
+*/
+bool ata_device_info(ata_dev_t *device, uint8 idx);
+/**
+* Read data from ATA drive
+* @param buff - destination buffer
+* @param idx - device index
+* @param lba - starting LBA of read
+* @param len - number of bytes to read
+* @return true on success
+*/
+bool ata_read(uint8 *buff, uint8 idx, uint64 lba, uint64 len);
+/**
 * ATA IRQ handler
 */
 uint64 ata_handler(irq_stack_t *stack);
+
+#if DEBUG == 1
+/**
+* List available ATA devices on screen
+*/
+void ata_list();
+#endif
 
 #endif

@@ -489,7 +489,7 @@ bool page_id_map(uint64 paddr, uint64 vaddr, bool mmio){
         if (!table[idx].present){
 			// Next level table does not exist - create one
             ct = (pm_t *)mem_alloc_align(sizeof(pm_t) * 512);
-            mem_fill((uint8 *)ct, sizeof(pm_t) * 512, 0);
+            mem_fill((uint8 *)ct, 0, sizeof(pm_t) * 512);
 
 			// Store the physical address
 			table[idx].frame = PAGE_FRAME((uint64)ct);

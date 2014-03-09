@@ -168,10 +168,10 @@ void interrupt_init(){
     //idt_ptr = (idt_ptr_t *)mem_alloc_clean(sizeof(idt_ptr_t));
     //isr_handlers = (isr_handler_t *)mem_alloc_clean(sizeof(isr_handler_t) * 256);
     //irq_handlers = (irq_handler_t *)mem_alloc_clean(sizeof(irq_handler_t) * 16);
-    mem_fill((uint8 *)&idt, sizeof(idt_entry_t) * 256, 0);
-    mem_fill((uint8 *)&idt_ptr, sizeof(idt_ptr_t), 0);
-    mem_fill((uint8 *)isr_handlers, sizeof(isr_handler_t) * 256, 0);
-    mem_fill((uint8 *)irq_handlers, sizeof(irq_handler_t) * 16, 0);
+    mem_fill((uint8 *)&idt, 0, sizeof(idt_entry_t) * 256);
+    mem_fill((uint8 *)&idt_ptr, 0, sizeof(idt_ptr_t));
+    mem_fill((uint8 *)isr_handlers, 0, sizeof(isr_handler_t) * 256);
+    mem_fill((uint8 *)irq_handlers, 0, sizeof(irq_handler_t) * 16);
     
 	idt_set_entry( 0, (uint64)isr0 , 0x8E);  // Division by zero exception
 	idt_set_entry( 1, (uint64)isr1 , 0x8E);  // Debug exception

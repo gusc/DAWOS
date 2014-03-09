@@ -86,25 +86,25 @@ void debug_scroll(){
 }
 
 void debug_print(uint8 color, const char *format, ...){
-    bool int_status = interrupt_status();
+    /*bool int_status = interrupt_status();
     if (int_status){
         interrupt_disable();
-    }
+    }*/
     va_list args;
 	va_start(args, format);
     __debug_print_f(color, format, args);
     _x = 0;
 	_y ++;
     va_end(args);
-    if (int_status){
+    /*if (int_status){
         interrupt_enable();
-    }
+    }*/
 }
 
 static void __debug_print_f(uint8 color, const char *format, va_list args){
 	char *vidmem = (char *)VIDEOMEM_LOC;
 	static char str[2001];
-	mem_fill((uint8 *)str, 2001, 0);
+	mem_fill((uint8 *)str, 0, 2001);
 	uint16 i;
 	// Keep everything in bounds
 	if (__write_f(str, 2000, format, args)){

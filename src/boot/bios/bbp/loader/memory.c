@@ -97,12 +97,12 @@ void *mem_alloc_clean(uint64 size){
 		// Heap allocation
         void *ptr = heap_alloc(_heap, size, false);
 		uint64 size = heap_alloc_size(ptr);
-		mem_fill((uint8 *)ptr, size, 0);
+		mem_fill((uint8 *)ptr, 0, size);
 		return ptr;
 	} else {
 		// Simple placement address allocation
 		uint64 ptr = _placement_addr;
-		mem_fill((uint8 *)ptr, size, 0);
+		mem_fill((uint8 *)ptr, 0, size);
 		_placement_addr += size;
 		return (void *)ptr;
 	}
@@ -113,14 +113,14 @@ void *mem_alloc_ac(uint64 size){
 		// Heap allocation
 		void *ptr = heap_alloc(_heap, size, true);
 		uint64 size = heap_alloc_size(ptr);
-		mem_fill((uint8 *)ptr, size, 0);
+		mem_fill((uint8 *)ptr, 0, size);
 		return ptr;
 	} else {
 		// Align the placement address to the next beginning of the page
 		_placement_addr = PAGE_SIZE_ALIGN(_placement_addr);
 		// Simple placement address allocation
 		uint64 ptr = _placement_addr;
-		mem_fill((uint8 *)ptr, size, 0);
+		mem_fill((uint8 *)ptr, 0, size);
 		_placement_addr += size;
 		return (void *)ptr;
 	}
@@ -140,7 +140,7 @@ void mem_free(void *ptr){
 void mem_free_clean(void *ptr){
 	if (_heap != 0){
 		uint64 size = heap_alloc_size(ptr);
-		mem_fill((uint8 *)ptr, size, 0);
+		mem_fill((uint8 *)ptr, 0, size);
 		heap_free(_heap, ptr);
 	}
 }
