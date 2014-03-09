@@ -108,7 +108,9 @@ static void ata_read_buffer(uint8 channel, uint8 reg, uint32 *buffer, uint64 qua
       ata_write_reg(channel, ATA_REG_CONTROL, (_ide_chan[channel].no_int << 1));
    }
 }
-
+/**
+* Initialize IDE controller
+*/
 static void ata_init_ide(uint32 bar0, uint32 bar1, uint32 bar2, uint32 bar3, uint32 bar4){
     // Store IO adresses - primary channel
     _ide_chan[_ide_chan_count].base = (bar0 & 0xFFFFFFFC) + 0x1F0 * (!bar0);
@@ -130,7 +132,10 @@ static void ata_init_ide(uint32 bar0, uint32 bar1, uint32 bar2, uint32 bar3, uin
 
     _ide_chan_count ++;
 }
-
+/**
+* Initialize all ATA devices on IDE port
+* @param i - IDE port
+*/
 static void ata_init_dev(uint8 i){
     uint8 j, k;
     for (j = 0; j < 2; j++) {
@@ -139,19 +144,18 @@ static void ata_init_dev(uint8 i){
         uint8 status;
         _ata_dev[_ata_dev_count].status.active = 0; // Assuming that no drive here.
  
-        // (I) Select Drive:
+        // Select the drive on channel
         ata_write_reg(i, ATA_REG_HDDEVSEL, 0xA0 | (j << 4)); // Select Drive.
         sleep(1);
 
-        // (II) Send ATA Identify Command:
+        // Send ATA IDENTIFY command
         ata_write_reg(i, ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
         sleep(1);
 
-        // (III) Polling:
+        // Polling
         if (ata_read_reg(i, ATA_REG_STATUS) == 0) {
             continue; // If Status = 0, No Device.
         }
- 
         while(1) {
             status = ata_read_reg(i, ATA_REG_STATUS);
             if ((status & ATA_SR_ERR)) {
@@ -163,11 +167,11 @@ static void ata_init_dev(uint8 i){
             }
         }
  
-        // (IV) Probe for ATAPI Devices:
+        // Probe for ATAPI device
         uint8 atapi = 0;
         if (err != 0) {
-            unsigned char cl = ata_read_reg(i, ATA_REG_LBA1);
-            unsigned char ch = ata_read_reg(i, ATA_REG_LBA2);
+            uint8 cl = ata_read_reg(i, ATA_REG_LBA1);
+            uint8 ch = ata_read_reg(i, ATA_REG_LBA2);
  
             if (cl == 0x14 && ch ==0xEB){
                 atapi = IDE_ATAPI;
@@ -181,26 +185,39 @@ static void ata_init_dev(uint8 i){
             sleep(1);
         }
  
-        // (V) Read Identification Space of the Device:
+        // Read Identification Space of the device
         uint8 *ata_ident = (uint8 *)mem_alloc(sizeof(uint16) * 256);
         ata_read_buffer(i, ATA_REG_DATA, (uint32 *)ata_ident, 128);
  
-        // (VI) Read Device Parameters:
+        // Read device parameters
         _ata_dev[_ata_dev_count].status.active = 1;
         _ata_dev[_ata_dev_count].status.atapi = atapi;
         _ata_dev[_ata_dev_count].channel = i;
         _ata_dev[_ata_dev_count].status.slave = j;
         _ata_dev[_ata_dev_count].signature = *((uint16 *)(ata_ident + ATA_IDENT_DEVICETYPE));
-        _ata_dev[_ata_dev_count].capabilities = *((uint16 *)(ata_ident + ATA_IDENT_CAPABILITIES));
-        _ata_dev[_ata_dev_count].commands  = *((uint32 *)(ata_ident + ATA_IDENT_COMMANDSETS));
- 
-        // (VII) Get Size:
-        if (_ata_dev[_ata_dev_count].commands & (1 << 26)){
+        _ata_dev[_ata_dev_count].capabilities = *((uint32 *)(ata_ident + ATA_IDENT_CAPABILITIES));
+        _ata_dev[_ata_dev_count].commands1  = *((uint64 *)(ata_ident + ATA_IDENT_COMMANDSETS));
+        _ata_dev[_ata_dev_count].commands2  = (uint64)(*((uint32 *)(ata_ident + ATA_IDENT_COMMANDSETS + 8)));
+        _ata_dev[_ata_dev_count].sector_size = 512;
+        uint16 sectors = *(uint16 *)(ata_ident + ATA_IDENT_SECTOR_SIZE);
+        if ((sectors & 0x4000) && !(sectors & 0x8000)){
+            _ata_dev[_ata_dev_count].status.multisect = ((sectors & 0x2000) ? 1 : 0);
+            _ata_dev[_ata_dev_count].status.largesect = ((sectors & 0x1000) ? 1 : 0);
+            if (_ata_dev[_ata_dev_count].status.largesect){
+                sectors &= 0xF;
+                _ata_dev[_ata_dev_count].sector_size = 512 * (uint64)(2 << sectors);
+            }
+        }
+
+        // Get device size:
+        if (_ata_dev[_ata_dev_count].commands1 & (1 << 26)){
             // Device uses 48-Bit Addressing:
             _ata_dev[_ata_dev_count].sectors = ((uint64)(*((uint64 *)(ata_ident + ATA_IDENT_MAX_LBA_EXT))) & 0xFFFFFFFFFFFF);
+            _ata_dev[_ata_dev_count].status.lba48 = 1;
         } else {
             // Device uses CHS or 28-bit Addressing:
             _ata_dev[_ata_dev_count].sectors = ((uint64)(*((uint32 *)(ata_ident + ATA_IDENT_MAX_LBA))) & 0xFFFFFFF);
+            _ata_dev[_ata_dev_count].status.lba48 = 0;
         }
  
         // (VIII) String indicates model of device (like Western Digital HDD and SONY DVD-RW...):
@@ -212,6 +229,49 @@ static void ata_init_dev(uint8 i){
  
         _ata_dev_count++;
     }
+}
+/**
+* Poll and check for errors
+* @param channel - IDE channel index
+* @param err_check - do status checking
+* @retun error number or 0 on success
+*/
+static uint64 ata_poll(uint8 channel, uint8 err_check){
+    uint64 spins = 0;
+    // Wait at least 400ns before reading status
+    sleep(1);
+    // Polling
+    while (ata_read_reg(channel, ATA_REG_STATUS) & ATA_SR_BSY){
+        spins ++;
+    }
+    // Read status and do status checks
+    if (err_check){
+        uint8 status = ata_read_reg(channel, ATA_REG_STATUS);
+        if (status & ATA_SR_ERR){
+            return 1; // Error
+        }
+        if (status & ATA_SR_DF){
+            return 2; // Device Fault
+        }
+        spins = 0;
+        // BSY = 0; DF = 0; ERR = 0 so we should check for DRQ now.
+        while(!(ata_read_reg(channel, ATA_REG_STATUS) & ATA_SR_DRQ)){
+            spins ++;
+            if (spins > 10000){
+                return 3;
+                break;
+            }
+        }
+    }
+    return 0;
+}
+/**
+* Select ATA device
+* @param idx - ATA device index
+*/
+static void ata_dev_sel(uint8 idx){
+    ata_write_reg(_ata_dev[idx].channel, ATA_REG_HDDEVSEL, 0xE0 | (_ata_dev[idx].status.slave << 4));
+    sleep(1);
 }
 
 bool ata_init(){
@@ -262,52 +322,64 @@ bool ata_device_info(ata_dev_t *device, uint8 idx){
 bool ata_read(uint8 *buff, uint8 idx, uint64 lba, uint64 len){
     if (idx < _ata_dev_count){
         uint64 err = 0;
-        uint8 type = IDE_ATA;
-        uint8 status;
+        bool error = false;
+        uint64 i = 0;
         uint8 channel = _ata_dev[idx].channel;
-        uint64 numsect = len / 512;
+        uint64 sectors = (len + (_ata_dev[idx].sector_size - 1)) / _ata_dev[idx].sector_size;
+
         // Select drive
-        ata_write_reg(channel, ATA_REG_HDDEVSEL, 0xE0 | (_ata_dev[idx].status.slave << 4)); // Select Drive.
-        sleep(1);
+        ata_dev_sel(idx);
 
         // Prepare request
-        ata_write_reg(channel, ATA_REG_SECCOUNT1, 0);
-        ata_write_reg(channel, ATA_REG_LBA3, (uint8)(lba >> 24));
-        ata_write_reg(channel, ATA_REG_LBA4, (uint8)(lba >> 32));
-        ata_write_reg(channel, ATA_REG_LBA5, (uint8)(lba >> 40));
-        ata_write_reg(channel, ATA_REG_SECCOUNT0, numsect);
+        if (_ata_dev[idx].status.lba48){
+            // For 48-bit LBA we push high 24bits first
+            ata_write_reg(channel, ATA_REG_SECCOUNT1, (uint8)(sectors >> 8));
+            ata_write_reg(channel, ATA_REG_LBA3, (uint8)(lba >> 24));
+            ata_write_reg(channel, ATA_REG_LBA4, (uint8)(lba >> 32));
+            ata_write_reg(channel, ATA_REG_LBA5, (uint8)(lba >> 40));
+        }
+        ata_write_reg(channel, ATA_REG_SECCOUNT0, (uint8)sectors);
         ata_write_reg(channel, ATA_REG_LBA0, (uint8)lba);
         ata_write_reg(channel, ATA_REG_LBA1, (uint8)(lba >> 8));
         ata_write_reg(channel, ATA_REG_LBA2, (uint8)(lba >> 16));
 
         // Send PIO read command
-        ata_write_reg(channel, ATA_REG_COMMAND, ATA_CMD_READ_PIO_EXT);
-        sleep(1);
-
-        // Polling
-        while (ata_read_reg(channel, ATA_REG_STATUS) & ATA_SR_BSY){
-            
-        }
-        // Read status and do status checks
-        status = ata_read_reg(channel, ATA_REG_STATUS);
-        if (status & ATA_SR_ERR){
-            err = 2; // Error.
-        }
-        if (status & ATA_SR_DF){
-            err = 1; // Device Fault.
-        }
-        // BSY = 0; DF = 0; ERR = 0 so we should check for DRQ now.
-        if ((status & ATA_SR_DRQ) == 0){
-            err = 3; // DRQ should be set
-        }
-        if (!err){
-            // Read data from device
-            insb(_ide_chan[channel].base, buff, len);
-            return true;
+        if (_ata_dev[idx].status.lba48){
+            ata_write_reg(channel, ATA_REG_COMMAND, ATA_CMD_READ_PIO_EXT);
         } else {
-            debug_print(DC_WB, "Error: %d", err);
+            ata_write_reg(channel, ATA_REG_COMMAND, ATA_CMD_READ_PIO);
+        }
+        
+        // Prepare temporary read buffer
+        uint8 *tmp = (uint8 *)mem_alloc(sectors * _ata_dev[idx].sector_size);
+        uint8 *t = tmp;
+        for (i = 0; i < sectors; i ++){
+            // Wait for device to become ready
+            err = ata_poll(channel, 1);
+            if (!err){
+                // Read data from device
+                insw(_ide_chan[channel].base, (uint16 *)t, (_ata_dev[idx].sector_size >> 1));
+                t += _ata_dev[idx].sector_size;
+            } else {
+                debug_print(DC_WB, "Error: %d, sector: %d", err, i);
+                debug_print(DC_WB, "  error bits: %x", (uint64)ata_read_reg(channel, ATA_REG_ERROR));
+                debug_print(DC_WB, "  status bits: %x", (uint64)ata_read_reg(channel, ATA_REG_STATUS));
+                error = true;
+                break;
+            }
+        }
+        // Copy temporary data to destination buffer
+        mem_copy(buff, tmp, len);
+        mem_free(tmp);
+        if (!error){
+            return true;
         }
     }
+    return false;
+}
+
+bool ata_write(uint8 idx, uint8 *buff, uint64 lba, uint64 len){
+    // TODO: implement
     return false;
 }
 
@@ -326,8 +398,16 @@ void ata_list(){
     debug_print(DC_WB, "ATA devices: %d", (uint64)_ata_dev_count);
     for (i = 0; i < _ata_dev_count; i ++){
         uint8 channel = _ata_dev[i].channel;
-        debug_print(DC_WB, "ATA drive @0x%x (%s)", (uint64)_ide_chan[channel].base, (_ata_dev[i].status.slave ? "Slave" : "Master"));
-        debug_print(DC_WB, "    Size %d", (uint64)_ata_dev[i].sectors);
+        debug_print(DC_WB, "ATA drive %d @0x%x (%s%s%s%s)", (uint64)i, (uint64)_ide_chan[channel].base, 
+            (_ata_dev[i].status.slave ? "Slave" : "Master"),
+            (_ata_dev[i].status.atapi ? ", ATAPI" : ""),
+            (_ata_dev[i].status.lba48 ? ", LBA48" : ""),
+            (_ata_dev[i].status.largesect ? ", Large Sector" : ""));
+        //debug_print(DC_WB, "    Commands 1 %x", (uint64)_ata_dev[i].commands1);
+        //debug_print(DC_WB, "    Commands 2 %x", (uint64)_ata_dev[i].commands2);
+        //debug_print(DC_WB, "    Capabilities %x", (uint64)_ata_dev[i].capabilities);
+        debug_print(DC_WB, "    Size %d (%d x %d)", (uint64)_ata_dev[i].sectors * (uint64)_ata_dev[i].sector_size, 
+            (uint64)_ata_dev[i].sectors, (uint64)_ata_dev[i].sector_size);
         debug_print(DC_WB, "    Model %s", (uint64)_ata_dev[i].model);
     }
 }

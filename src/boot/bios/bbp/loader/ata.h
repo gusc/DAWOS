@@ -126,6 +126,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ATA_IDENT_MAX_LBA      120
 #define ATA_IDENT_COMMANDSETS  164
 #define ATA_IDENT_MAX_LBA_EXT  200
+#define ATA_IDENT_SECTOR_SIZE  212
 
 typedef struct {
     uint16 base;
@@ -139,11 +140,16 @@ typedef struct {
         uint64 active           :1; // 0 - device is no connected, 1 - device is up-n-running
         uint64 slave            :1; // 1 = device is slave
         uint64 atapi            :1; // 1 = device is ATAPI, 0 = ATA
-        uint64 reserved         :61;
+        uint64 lba48            :1; // 1 = device is LBA48 capable
+        uint64 multisect        :1; // 1 = device has multiple logical sectors in a physical sector
+        uint64 largesect        :1; // 1 = device has a larger logical sector than 512 byts
+        uint64 reserved         :58;
     } status;
     uint64 sectors;
-    uint32 commands;
-    uint16 capabilities;
+    uint64 sector_size;
+    uint64 commands1;
+    uint64 commands2;
+    uint32 capabilities;
     uint16 signature;
     uint8 channel;
     uint8 model[41];
@@ -401,6 +407,15 @@ bool ata_device_info(ata_dev_t *device, uint8 idx);
 * @return true on success
 */
 bool ata_read(uint8 *buff, uint8 idx, uint64 lba, uint64 len);
+/**
+* Write data to ATA drive
+* @param idx - device index
+* @param buff - destination buffer
+* @param lba - starting LBA of read
+* @param len - number of bytes to read
+* @return true on success
+*/
+bool ata_write(uint8 idx, uint8 *buff, uint64 lba, uint64 len);
 /**
 * ATA IRQ handler
 */

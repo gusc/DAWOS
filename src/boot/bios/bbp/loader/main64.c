@@ -88,17 +88,9 @@ void main64(){
         pic_enable(0xFFFF);
         // Enable interrupts (Do it after PCI, otherwise it seems to GPF at random)
         interrupt_enable();
-        
         // Initialize PCI
-        debug_print(DC_WB, "PCI init");
-
         if (pci_init()){
-#if DEBUG == 1
-            //mem_list();
-		    //pci_list();
-#endif
 	        // Initialize ATA
-            debug_print(DC_WB, "ATA init");
             if (ata_init()){
 #if DEBUG == 1
 		        ata_list();
