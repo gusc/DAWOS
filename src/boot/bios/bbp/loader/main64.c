@@ -46,7 +46,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "pit.h"
 #include "pic.h"
 #include "ata.h"
-#include "ahci.h"
 #include "sleep.h"
 #if DEBUG == 1
 	#include "debug_print.h"
@@ -93,7 +92,7 @@ void main64(){
 	        // Initialize ATA
             if (ata_init()){
 #if DEBUG == 1
-		        ata_list();
+		        //ata_list();
 #endif
                 uint8 *mem = (uint8 *)mem_alloc_clean(512);
                 uint64 dev_count = ata_num_device();
@@ -110,36 +109,6 @@ void main64(){
                 }
 
             }
-	        // Initialize AHCI
-            //debug_print(DC_WB, "AHCI init");
-        
-            /*if (ahci_init()){
-#if DEBUG == 1
-		        ahci_list();
-#endif
-		        uint8 *mem = (uint8 *)mem_alloc_clean(512);
-		        uint64 dev_count = ahci_num_dev();
-		        uint64 y = 23;
-                uint16 isr = pic_read_ocw3(PIC_READ_ISR);
-		        if (dev_count > 0){
-                    debug_print(DC_WB, "ISR: %x", (uint64)isr);
-                    if (ahci_id(0, mem)){
-                        debug_print(DC_WB, "ID OK");
-                        debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
-                    } else {
-                        debug_print(DC_WB, "ID failed");
-                    }
-                    mem_fill(mem, 512, 0);
-			        if (ahci_read(0, 0, mem, 512)){
-				        debug_print(DC_WB, "Read:");
-				        for (y = 0; y < 64; y += 8){
-					        debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
-				        }
-			        } else {
-				        debug_print(DC_WB, "Read failed");
-			        }
-                }
-	        }*/
         }
 #if DEBUG == 1
 	    debug_print(DC_WB, "Done");
