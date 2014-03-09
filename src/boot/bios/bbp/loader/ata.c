@@ -361,9 +361,6 @@ bool ata_read(uint8 *buff, uint8 idx, uint64 lba, uint64 len){
                 insw(_ide_chan[channel].base, (uint16 *)t, (_ata_dev[idx].sector_size >> 1));
                 t += _ata_dev[idx].sector_size;
             } else {
-                debug_print(DC_WB, "Error: %d, sector: %d", err, i);
-                debug_print(DC_WB, "  error bits: %x", (uint64)ata_read_reg(channel, ATA_REG_ERROR));
-                debug_print(DC_WB, "  status bits: %x", (uint64)ata_read_reg(channel, ATA_REG_STATUS));
                 error = true;
                 break;
             }
@@ -384,7 +381,7 @@ bool ata_write(uint8 idx, uint8 *buff, uint64 lba, uint64 len){
 }
 
 uint64 ata_handler(irq_stack_t *stack){
-    debug_print(DC_WB, "ATA IRQ %d", (uint64)stack->irq_no);
+    //debug_print(DC_WB, "ATA IRQ %d", (uint64)stack->irq_no);
     return 0;
 }
 

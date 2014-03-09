@@ -10,8 +10,7 @@ OC = x86_64-pc-elf-objcopy
 
 # Global flag definitions
 AF_ALL = -felf64 -O0
-CF_ALL = -nostartfiles -nostdlib -nodefaultlibs -fno-builtin 
-#-std=c99
+CF_ALL = -nostartfiles -nostdlib -nodefaultlibs -fno-builtin -std=c99
 LF_ALL = -i
 
 # Target object definition

@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "pic.h"
 #include "ata.h"
 #include "sleep.h"
+#include "gpt.h"
 #if DEBUG == 1
 	#include "debug_print.h"
 #endif
@@ -66,6 +67,8 @@ void main64(){
 	debug_print(DC_WB, "Booting...");
 #endif
     uint64 check = (uint64)(&_checksum);
+    uint64 i, j;
+
     if (check == 0xF00BAA){
         //debug_print(DC_WB, "Bootloader: 0x7E00 - 0x%x", (uint64)&_end);
 
@@ -91,23 +94,19 @@ void main64(){
         if (pci_init()){
 	        // Initialize ATA
             if (ata_init()){
-#if DEBUG == 1
-		        //ata_list();
-#endif
-                uint8 *mem = (uint8 *)mem_alloc_clean(512);
-                uint64 dev_count = ata_num_device();
-                uint64 y = 0;
-                if (dev_count > 0){
-                    debug_print(DC_WB, "Read:");
-                    if (ata_read(mem, 0, 0, 512)){
-                        for (y = 0; y < 64; y += 8){
-					        debug_print(DC_WB, "%x %x %x %x %x %x %x %x", mem[y], mem[y + 1], mem[y + 2], mem[y + 3], mem[y + 4], mem[y + 5], mem[y + 6], mem[y + 7]);
-				        }
-                    } else {
-                        debug_print(DC_WB, "Failed");
+                // Initialize GPT driver
+                gpt_init();
+                gpt_part_entry_t *part = (gpt_part_entry_t *)mem_alloc_clean(sizeof(gpt_part_entry_t));
+                for (i = 0; i < ata_num_device(); i ++){
+                    if (gpt_init_drive(i)){
+                        debug_print(DC_WB, "Disk %d is GPT, partitions: %d", i, gpt_num_part(i));
+                        for (j = 0; j < gpt_num_part(i); j ++){
+                            if (gpt_part_entry(part, i, j)){
+                                debug_print(DC_WB, "   part %d: %g", j, &part->part_guid);
+                            }
+                        }
                     }
                 }
-
             }
         }
 #if DEBUG == 1

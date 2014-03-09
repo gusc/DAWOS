@@ -48,7 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define inline inline   __attribute__((always_inline))
 #define packed          __attribute__((packed))
 #define align(x)        __attribute__((aligned(x)))
-//#define asm __asm__
+#define asm __asm__
 
 #define BREAK() asm volatile ("xchg %bx, %bx")
 #define NOP() asm volatile ("nop")
@@ -82,5 +82,15 @@ typedef struct {
 	uint32 low;
 	uint32 high;
 } split_uint64_t;
+
+/**
+* GUID structure
+*/
+typedef struct {
+	uint32 data1;
+	uint16 data2;
+	uint16 data3;
+	uint8 data4[8];
+} guid_t;
 
 #endif /* __common_h */

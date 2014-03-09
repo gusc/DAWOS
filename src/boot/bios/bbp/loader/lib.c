@@ -196,6 +196,7 @@ uint64 __write_f(char *dest, uint64 len, const char *format, va_list args){
 	uint64 val_uint64;
 	char val_char;
 	char *val_str;
+    guid_t *val_guid;
 	
 	while (*f && ret < len){
 		if (*f == '%'){ // possible specifier
@@ -242,6 +243,30 @@ uint64 __write_f(char *dest, uint64 len, const char *format, va_list args){
 					}
 					f ++;
 					break;
+                case 'g': // GUID
+                    val_guid = (guid_t *)va_arg(args, uint64);
+                    val_len = int_to_str(d, MAX_INT_STR, (uint64)val_guid->data1, 16);
+					d += val_len;
+					ret += val_len;
+                    *(d++) = '-';
+                    ret ++;
+                    val_len = int_to_str(d, MAX_INT_STR, (uint64)val_guid->data2, 16);
+					d += val_len;
+					ret += val_len;
+                    *(d++) = '-';
+                    ret ++;
+                    val_len = int_to_str(d, MAX_INT_STR, (uint64)val_guid->data3, 16);
+					d += val_len;
+					ret += val_len;
+                    *(d++) = '-';
+                    ret ++;
+                    for (uint64 i = 0; i < 8; i ++){
+                        val_len = int_to_str(d, MAX_INT_STR, (uint64)val_guid->data4[i], 16);
+					    d += val_len;
+					    ret += val_len;
+                    }
+					f ++;
+                    break;
 				default: // not a specifier
 					*(d ++) = *f;
 					ret ++;
