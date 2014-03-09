@@ -94,23 +94,21 @@ typedef struct {
 /**
 * Heap block header structure
 */
-struct heap_header_struct {
+typedef struct packed {
 	uint64 magic;
 	uint64 size;
-} __PACKED;
-typedef struct heap_header_struct heap_header_t;
+} heap_header_t;
 /**
 * Heap block footer structure
 */
-struct heap_footer_struct {
+typedef struct packed {
 	uint64 magic;
 	heap_header_t *header;
-} __PACKED;
-typedef struct heap_footer_struct heap_footer_t;
+} heap_footer_t;
 /**
 * Heap structure
 */
-struct heap_struct {
+typedef struct packed {
 	uint64 start_addr;							// Start address of the heap
 	uint64 end_addr;							// End address of the heap
 	uint64 max_addr;							// Maximum address of the heap
@@ -119,8 +117,7 @@ struct heap_struct {
         uint64 reserved             :63;
     } flags;
 	heap_header_t *free[HEAP_LIST_COUNT + 1];	// Free block list + tree in the last item
-} __PACKED;
-typedef struct heap_struct heap_t;
+} heap_t;
 
 /**
 * Create a new heap with allocation and deallocation functionalities

@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "../config.h"
+#include "lib.h"
 #include "paging.h"
 #include "heap.h"
 #include "memory.h"
@@ -45,22 +46,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * Free block structure for free lists - header + pointers to next and previous blocks
 */
 typedef struct free_item_struct free_item_t;
-struct free_item_struct {
+struct packed free_item_struct {
 	heap_header_t header;
 	free_item_t *prev_block; // Previous block in the segregated list
 	free_item_t *next_block; // Next block in the segregated list
-} __PACKED;
+};
 /**
 * Free block structure for search tree - header + pointers to next and previous blocks
 */
 typedef struct free_node_struct free_node_t;
-struct free_node_struct {
+struct packed free_node_struct {
 	heap_header_t header;
 	free_node_t *smaller_block; // Smaller block in the sorted list
 	free_node_t *larger_block; // Larger block in the sorted list
 	free_node_t *child_block; // Equaly sized child block
 	free_node_t *parent_block; // Parent block of equaly sized child
-} __PACKED;
+};
 
 // Magic number used in heap blocks for sanity checks
 #define HEAP_MAGIC 0xFFFFC0CAC01AFFFF

@@ -51,7 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
 * PCI address structure
 */
-typedef union {
+typedef union packed {
 	struct {
 		uint32 empty	: 2; // Always 0
 		uint32 reg		: 6; // Register number
@@ -66,7 +66,7 @@ typedef union {
 /**
 * PCI configuration space header structure
 */
-typedef volatile struct {
+typedef volatile struct packed {
 	uint16 vendor_id;
 	uint16 device_id;
 	uint16 command;
@@ -83,7 +83,7 @@ typedef volatile struct {
 /**
 * Standard PCI device configuration space structure
 */
-typedef volatile struct {
+typedef volatile struct packed {
 	pci_header_t header;
 	uint32 bar[6];
 	uint32 cis_ptr;

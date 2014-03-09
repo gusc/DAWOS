@@ -110,7 +110,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * @param [out] val - pointer to memory location where to write MSR value
 * @return void
 */
-static void msr_read(uint32 msr, uint64 *val){
+static inline void msr_read(uint32 msr, uint64 *val){
 	split_uint64_t *v = (split_uint64_t *)val;
 	asm volatile("rdmsr" : "=a"(v->low), "=d"(v->high) : "c"(msr));
 }
@@ -120,7 +120,7 @@ static void msr_read(uint32 msr, uint64 *val){
 * @param [in] val - value to write into MSR
 * @return void
 */
-static void msr_write(uint32 msr, uint64 val){
+static inline void msr_write(uint32 msr, uint64 val){
 	split_uint64_t *v = (split_uint64_t *)&val;
 	asm volatile("wrmsr" : : "a"(v->low), "d"(v->high), "c"(msr));
 }

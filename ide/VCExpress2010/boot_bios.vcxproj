@@ -32,7 +32,6 @@
     <ClInclude Include="..\..\src\boot\bios\bbp\boot\main16.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\boot\main32.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\config.h" />
-    <ClInclude Include="..\..\src\boot\bios\bbp\loader\ahci.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\ata.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\cmos.h" />
     <ClInclude Include="..\..\src\boot\bios\bbp\loader\common.h" />
@@ -55,7 +54,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main16.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\boot\main32.c" />
-    <ClCompile Include="..\..\src\boot\bios\bbp\loader\ahci.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\ata.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\debug_print.c" />
     <ClCompile Include="..\..\src\boot\bios\bbp\loader\heap.c" />

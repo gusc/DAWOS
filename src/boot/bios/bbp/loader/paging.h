@@ -79,22 +79,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
 * E820 memory map entry structure
 */
-struct e820entry_struct {
+typedef struct packed {
 	uint16 entry_size;	// if 24, then it has attributes
 	uint64 base;
 	uint64 length;
 	uint32 type;
 	uint32 attributes;	// ACPI 3.0 only
-} __PACKED;
-typedef struct e820entry_struct e820entry_t;
+} e820entry_t;
 /**
 * E820 memory map structure
 */
-struct e820map_struct {
+typedef struct packed {
 	uint16 size;
 	e820entry_t entries[];
-} __PACKED;
-typedef struct e820map_struct e820map_t;
+} e820map_t;
 
 /**
 * Page table entry structure
@@ -118,19 +116,17 @@ typedef struct {
 /**
 * Page block header structure
 */
-struct page_header_struct {
+typedef struct packed {
 	uint64 magic;
 	uint64 size;
-} __PACKED;
-typedef struct page_header_struct page_header_t;
+} page_header_t;
 /**
 * Heap block footer structure
 */
-struct page_footer_struct {
+typedef struct packed {
 	uint64 magic;
 	page_header_t *header;
-} __PACKED;
-typedef struct page_footer_struct page_footer_t;
+} page_footer_t;
 
 /**
 * Initialize paging

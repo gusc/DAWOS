@@ -59,7 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * @param reg - register number
 * @return register value
 */
-static uint8 cmos_read(uint8 reg){
+static inline uint8 cmos_read(uint8 reg){
 	outb(0x70, reg);
 	return inb(0x71);
 }
@@ -68,7 +68,7 @@ static uint8 cmos_read(uint8 reg){
 * @param reg - register number
 * @param value - value to write
 */
-static void cmos_write(uint8 reg, uint8 value){
+static inline void cmos_write(uint8 reg, uint8 value){
 	outb(0x70, reg);
 	outb(0x71, value);
 }

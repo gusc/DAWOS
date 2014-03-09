@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * @param value - byte value
 * @return void
 */
-static void outb(uint16 port, uint8 value){
+static inline void outb(uint16 port, uint8 value){
 	asm volatile ("outb %1, %0" : : "d"(port), "a"(value));
 }
 /**
@@ -55,7 +55,7 @@ static void outb(uint16 port, uint8 value){
 * @param value - word value
 * @return void
 */
-static void outw(uint16 port, uint16 value){
+static inline void outw(uint16 port, uint16 value){
 	asm volatile ("outw %1, %0" : : "d"(port), "a"(value));
 }
 /**
@@ -64,7 +64,7 @@ static void outw(uint16 port, uint16 value){
 * @param value - dword value
 * @return void
 */
-static void outd(uint16 port, uint32 value){
+static inline void outd(uint16 port, uint32 value){
 	asm volatile ("outl %1, %0" : : "d"(port), "a"(value));
 }
 /**
@@ -72,7 +72,7 @@ static void outd(uint16 port, uint32 value){
 * @param port - IO port number
 * @return byte value
 */
-static uint8 inb(uint16 port){
+static inline uint8 inb(uint16 port){
 	uint8 ret;
 	asm volatile("inb %1, %0" : "=a"(ret) : "d"(port));
 	return ret;
@@ -82,7 +82,7 @@ static uint8 inb(uint16 port){
 * @param port - IO port number
 * @return word value
 */
-static uint16 inw(uint16 port){
+static inline uint16 inw(uint16 port){
 	uint16 ret;
 	asm volatile("inw %1, %0" : "=a"(ret) : "d"(port));
 	return ret;
@@ -92,7 +92,7 @@ static uint16 inw(uint16 port){
 * @param port - IO port number
 * @return dword value
 */
-static uint32 ind(uint16 port){
+static inline uint32 ind(uint16 port){
 	uint32 ret;
 	asm volatile("inl %1, %0" : "=a"(ret) : "d"(port));
 	return ret;
@@ -103,7 +103,7 @@ static uint32 ind(uint16 port){
 * @param address - target memory address to read into
 * @param count - number of bytes to read
 */
-static void insb(uint16 port , uint8 *address , int count){
+static inline void insb(uint16 port , uint8 *address , int count){
     asm volatile("cld; rep insb" : "=D" (address), "=c" (count) : "d" (port), "0" (address), "1" (count) : "memory", "cc");
 }
 /**
@@ -112,7 +112,7 @@ static void insb(uint16 port , uint8 *address , int count){
 * @param address - target memory address to read into
 * @param count - number of words to read
 */
-static void insw(uint16 port , uint16 *address , int count){
+static inline void insw(uint16 port , uint16 *address , int count){
     asm volatile("cld; rep insw" : "=D" (address), "=c" (count) : "d" (port), "0" (address), "1" (count) : "memory", "cc");
 }
 /**
@@ -121,7 +121,7 @@ static void insw(uint16 port , uint16 *address , int count){
 * @param address - target memory address to read into
 * @param count - number of dwords to read
 */
-static void insd(uint16 port , uint32 *address , int count){
+static inline void insd(uint16 port , uint32 *address , int count){
     asm volatile("cld; rep insl" : "=D" (address), "=c" (count) : "d" (port), "0" (address), "1" (count) : "memory", "cc");
 }
 

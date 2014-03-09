@@ -48,21 +48,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
 * E820 memory map entry structure
 */
-struct e820entry_struct {
+typedef struct packed {
     uint16 entry_size;  // if 24, then it has attributes
     uint64 base;
     uint64 length;
     uint32 type;
     uint32 attributes;  // ACPI 3.0 only
-} __PACKED;
-typedef struct e820entry_struct e820entry_t;
+} e820entry_t;
 /**
 * E820 memory map structure
 */
-struct e820map_struct {
+typedef struct packed {
     uint16 size;
     e820entry_t entries[];
-} __PACKED;
-typedef struct e820map_struct e820map_t;
+} e820map_t;
 
 #endif  /* __main16_h */

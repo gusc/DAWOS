@@ -45,10 +45,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __common32_h
 #define __common32_h
 
-#define __INLINE    __attribute__((always_inline))
-#define __NORETURN  __attribute__((noreturn))
-#define __PACKED    __attribute__((packed))
-#define __ALIGN(x)  __attribute__((aligned(x)))
+#define packed    __attribute__((packed))
+#define algin(x)  __attribute__((aligned(x)))
 
 #define BREAK() asm volatile ("xchg %bx, %bx")
 #define HANG() while(true){}

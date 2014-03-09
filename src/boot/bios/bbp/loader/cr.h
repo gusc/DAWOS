@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * Read CR0
 * @return uint64
 */
-static uint64 get_cr0(){
+static inline uint64 get_cr0(){
 	uint64 cr;
 	asm volatile("mov %%cr0, %0" : "=a"(cr) : );
 	return cr;
@@ -52,7 +52,7 @@ static uint64 get_cr0(){
 * Write CR0
 * @param uint64
 */
-static void set_cr0(uint64 cr){
+static inline void set_cr0(uint64 cr){
 	asm volatile("mov %0, %%cr0" : : "r"(cr));
 }
 
@@ -60,7 +60,7 @@ static void set_cr0(uint64 cr){
 * Read CR2
 * @return uint64
 */
-static uint64 get_cr2(){
+static inline uint64 get_cr2(){
 	uint64 cr;
 	asm volatile("mov %%cr2, %0" : "=a"(cr) : );
 	return cr;
@@ -69,7 +69,7 @@ static uint64 get_cr2(){
 * Write CR2
 * @param uint64
 */
-static void set_cr2(uint64 cr){
+static inline void set_cr2(uint64 cr){
 	asm volatile("mov %0, %%cr2" : : "r"(cr));
 }
 
@@ -77,7 +77,7 @@ static void set_cr2(uint64 cr){
 * Read CR3
 * @return uint64
 */
-static uint64 get_cr3(){
+static inline uint64 get_cr3(){
 	uint64 cr;
 	asm volatile("mov %%cr3, %0" : "=a"(cr) : );
 	return cr;
@@ -86,7 +86,7 @@ static uint64 get_cr3(){
 * Write CR3
 * @return uint64
 */
-static void set_cr3(uint64 cr){
+static inline void set_cr3(uint64 cr){
 	asm volatile("mov %0, %%cr3" : : "r"(cr));
 }
 
@@ -94,7 +94,7 @@ static void set_cr3(uint64 cr){
 * Read CR4
 * @return uint64
 */
-static uint64 get_cr4(){
+static inline uint64 get_cr4(){
 	uint64 cr;
 	asm volatile("mov %%cr4, %0" : "=a"(cr) : );
 	return cr;
@@ -103,7 +103,7 @@ static uint64 get_cr4(){
 * Write CR4
 * @return uint64
 */
-static void set_cr4(uint64 cr){
+static inline void set_cr4(uint64 cr){
 	asm volatile("mov %0, %%cr4" : : "r"(cr));
 }
 
@@ -111,7 +111,7 @@ static void set_cr4(uint64 cr){
 * Read CR8
 * @return uint64
 */
-static uint64 get_cr8(){
+static inline uint64 get_cr8(){
 	uint64 cr;
 	asm volatile("mov %%cr8, %0" : "=a"(cr) : );
 	return cr;
@@ -120,7 +120,7 @@ static uint64 get_cr8(){
 * Write CR8
 * @return uint64
 */
-static void set_cr8(uint64 cr){
+static inline void set_cr8(uint64 cr){
 	asm volatile("mov %0, %%cr8" : : "r"(cr));
 }
 

@@ -45,12 +45,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __common_h
 #define __common_h
 
-#define __NOINLINE  __attribute__((noinline))
-#define __INLINE	__attribute__((always_inline))
-#define __REGPARM   __attribute__((regparm(3)))
-#define __NORETURN  __attribute__((noreturn))
-#define __PACKED	__attribute__((packed))
-#define __ALIGN(x)	__attribute__((aligned(x)))
+#define inline inline   __attribute__((always_inline))
+#define packed          __attribute__((packed))
+#define align(x)        __attribute__((aligned(x)))
+//#define asm __asm__
 
 #define BREAK() asm volatile ("xchg %bx, %bx")
 #define NOP() asm volatile ("nop")
